@@ -143,48 +143,33 @@ class Experiment:
 
 if __name__ == "__main__":
     parameter_choices = {
-        #MMDAWAdapter: {"gamma": [1], "alpha": [ .1]},
-        #MMDAWAdapter: {"gamma": [1], "alpha": [ 1e-11, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6,
-        #                                        1e-5,1e-4, 1e-3, 1e-2, 1e-1, .2, .3, .4, .5,
-        #                                        .9,
-        #                                        .99,
-        #                                        .999,
-        #                                        .9999,
-        #                                        .99999,
-        #                                        .999999,
-        #                                        .9999999,
-        #                                        .99999999,
-        #                                        .999999999,
-        #                                        .9999999999,
-        #                                        .99999999999,
-        #                                        .999999999999
-        #                                        ]},
-        #AdwinK: {"k": [10e-5, 0.01, 0.02, 0.05, 0.1, 0.2,.9999], "delta": [0.05, .1, .2, .5, .9, .99 ] },
-        #WATCH: {
-        #    "kappa": [25,50,100],
-        #    "mu": [10,20,50,100,500,1000, 2000],
-        #    "epsilon": [1, 2, 3],
-        #    "omega": [20, 100, 250, 500, 1000],
-        #},
-        #IBDD: {
-        #    "w": [20, 100, 200, 300],
-        #    "m": [10, 20, 50, 100],
-        #},  # already tuned manually... other values work very bad.
-        #D3: {
-        #    "w": [100, 200, 500],
-        #    "roh": [0.1, 0.3, 0.5],
-        #    "tau": [0.7, 0.8, 0.9],
-        #    "tree_depth": [1],
-        #},  # tree_depths > 1 are too sensitive...
-        #ScanB : { 
-        #    "window_size" : [100], #[200,300]
-        #    "num_windows" : [3]
-        #    },
-        #NewMA : {
-        #    "forget_factor" : [0.01,0.02,0.05,0.1],
-        #    "thresholding_quantile" : [0.99, 0.999],
-        #    "window_size": [20,50,100] #,200,300]
-        #    }
+        MMDEWAdapter: {"gamma": [1], "alpha": [0.0001, 0.001, 0.01, 0.1, 0.2,.999999999]},
+        AdwinK: {"k": [10e-5, 0.01, 0.02, 0.05, 0.1, 0.2,.9999], "delta": [0.05, .1, .2, .5, .9, .99 ] },
+        WATCH: {
+            "kappa": [25,50,100],
+            "mu": [10,20,50,100,500,1000, 2000],
+            "epsilon": [1, 2, 3],
+            "omega": [20, 100, 250, 500, 1000],
+        },
+        IBDD: {
+            "w": [20, 100, 200, 300],
+            "m": [10, 20, 50, 100],
+        },  # already tuned manually... other values work very badly.
+        D3: {
+            "w": [100, 200, 500],
+            "roh": [0.1, 0.3, 0.5],
+            "tau": [0.7, 0.8, 0.9],
+            "tree_depth": [1],
+        },  # tree_depths > 1 are too sensitive...
+        ScanB : { 
+            "window_size" : [100], #[200,300]
+            "num_windows" : [3]
+            },
+        NewMA : {
+            "forget_factor" : [0.01,0.02,0.05,0.1],
+            "thresholding_quantile" : [0.99, 0.999],
+            "window_size": [20,50,100] #,200,300]
+            },
         ScanB : {
             "forget_factor" : [0.01,0.05],
             "thresholding_quantile" : [0.99, 0.999],
@@ -202,11 +187,11 @@ if __name__ == "__main__":
     n_reps = 3
 
     datasets = [
-        GasSensors(preprocess=preprocess, max_len=max_len),
-        MNIST(preprocess=preprocess, max_len=max_len),
-        FashionMNIST(preprocess=preprocess, max_len=max_len),
-        HAR(preprocess=preprocess, max_len=max_len),
-        CIFAR10(preprocess=preprocess, max_len=max_len),
+        #GasSensors(preprocess=preprocess, max_len=max_len),
+        #MNIST(preprocess=preprocess, max_len=max_len),
+        #FashionMNIST(preprocess=preprocess, max_len=max_len),
+        #HAR(preprocess=preprocess, max_len=max_len),
+        #CIFAR10(preprocess=preprocess, max_len=max_len),
         TrafficUnif(preprocess=preprocess, max_len=max_len),
     ]
 

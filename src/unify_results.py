@@ -23,7 +23,7 @@ def load_data(folder):
 
     for col in ["actual_cps", "detected_cps_at", "detected_cps"]:
         df.loc[:,col] = df.loc[:,col].apply(lambda x : literal_eval(x))
-        df.loc[:,col] = df.loc[:,col].apply(lambda z : [i for i in z if i > 100])
+        df.loc[:,col] = df.loc[:,col].apply(lambda z : [i for i in z if i > 40]) # 40 to account for TrafficUnif
         
 
 
@@ -61,7 +61,6 @@ if __name__=="__main__":
     avg_results = df.groupby(["dataset", "algorithm", "config"]).mean().reset_index().fillna(0)
     best_configs = avg_results.loc[avg_results.groupby(["dataset", "algorithm"])["f1_detected_cps_at"].idxmax()]
     data = pd.merge(best_configs, df, how="left", on=["dataset","algorithm","config"])
-    #data = data.drop(113)
 
 
     data["mean_until_detection"] = data.apply(lambda x : metrics.mean_until_detection(x.actual_cps, x.detected_cps_at), axis=1)

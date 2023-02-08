@@ -16,7 +16,7 @@ class MMDEWAdapter(DriftDetector):
         self.logger = None
         self.detector = BucketStream(gamma=self.gamma, compress=True, alpha=self.alpha)
         self.element_count = 0
-        super(MMDAWAdapter, self).__init__()
+        super(MMDEWAdapter, self).__init__()
 
     def name(self) -> str:
         return "MMDEW" 

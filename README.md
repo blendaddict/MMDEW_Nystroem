@@ -1,4 +1,4 @@
-# Scalable Online Change Detection for High-dimensional Data Streams
+# Maximum Mean Discrepancy on Exponential Windows for Streaming Change Detection
 
 This repository hosts the code for the paper:
 
@@ -17,18 +17,15 @@ To run the algorithm:
     conda create -n mmdew python=3.8 matplotlib seaborn numpy=1.20 scikit-learn jupyter tensorflow-cpu keras
     pip install . # tested with python 3.8
     python run_detectors.py
+    python unify_results.py 1  ../results/<date> && python unify_results.py 4  ../results/<date>
     
 
-To produce the figures:
-
-
-   # same as above
-   python eval_results.py
-   python eval_results_percent_changes_detected.py
-   
+Use the notebooks in `notebooks` to produce the figures.   
 
 # Results
 
 ![Main Results](figures/results.png)
 
 ![PCD and MTD](figures/percent_changes_detected.png)
+
+![Runtime](figures/runtime.png)
