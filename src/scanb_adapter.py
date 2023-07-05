@@ -1,6 +1,6 @@
 import numpy as np
 
-from detectors import RegionalDriftDetector, DriftDetector
+from mmdew.abstract import RegionalDriftDetector, DriftDetector
 
 import onlinecp.algos as algos
 import onlinecp.utils.feature_functions as feat

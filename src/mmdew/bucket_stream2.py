@@ -1,7 +1,9 @@
-import numpy as np
-from mmdew.mmd import MMD
-from sklearn import metrics
+import math
 
+import numpy as np
+from .mmd import MMD
+from sklearn import metrics
+import numpy.linalg as la
 
 class BucketStream:
     def __init__(self, gamma, compress=True, alpha=0.1, seed=1234, min_size=200):
@@ -17,25 +19,18 @@ class BucketStream:
         self.min_size = min_size
 
     def insert(self, element):
-        XX = self.k(element, element)
-        XX_str = self.str_k(element, element) if self.logging else ""
-        XY, n_XY = self.xy(element)
-        XY_str = self.str_xy(element) if self.logging else ""
+        subsample, weights, capacity = self.maximum_mean_discrepancy.get_bucket_content(element)
         self.buckets += [
             Bucket(
-                np.array(element).reshape(1, -1),
-                capacity=1,
-                XX=XX,
-                XY=XY,
-                XX_str=XX_str,
-                XY_str=XY_str,
-                n_XX=1,
-                n_XY=n_XY,
+                elements=subsample,
+                weights=weights,
+                capacity=capacity
             )
         ]
         self._find_changes()
         self._merge()
 
+    #ToDo: Delete function
     def mmd(self, split):
         """MMD of the buckets coming before `split` and the buckets coming after `split`, i.e., with 3 buckets and `split = 1` it returns `mmd(b_0, union b1 ... bn)`."""
         start = self.merge_buckets(self.buckets[:split])
@@ -43,11 +38,8 @@ class BucketStream:
 
         m = len(start.elements)
         n = len(end.elements)
-  
-        XX = 1 / start.n_XX * start.XX
-        YY = 1 / end.n_XX * end.XX
-#        print(np.sum(end.n_XY))
-        XY = 2 / np.sum(end.n_XY) * np.sum(end.XY)
+
+
 
         #return XX + YY - XY, m*1000, n*1000
         return XX + YY - XY, int(np.sqrt(end.n_XX)), int(np.sqrt(start.n_XX)) #, XX, YY, XY
@@ -72,6 +64,7 @@ class BucketStream:
                     b.n_XY = b.n_XY[i:]
                 return
 
+
     def merge_buckets(self, bucket_list):
         """Merges the buckets in `bucket_list` such that one bucket remains with XX, and XY such that their values correspond to the case that all data would have been in this bucket."""
         if len(bucket_list) == 1:
@@ -79,62 +72,42 @@ class BucketStream:
         current = bucket_list[-1]
         previous = bucket_list[-2]
 
-        XX = previous.XX + current.XX + 2 * current.XY[-1]
-        n_XX = previous.n_XX + current.n_XX + 2 * current.n_XY[-1]
-        XX_str = previous.XX_str + current.XX_str + 2 * current.XY_str[-1] if self.logging else ""
-        XY = np.array(previous.XY) + np.array(current.XY[:-1])
-        n_XY = np.array(previous.n_XY) + np.array(current.n_XY[:-1])
-        XY_str = [p + c for p, c in zip(previous.XY_str, current.XY_str[:-1])] if self.logging else ""
+        current_elements = current.elements
+        previous_elements = previous.elements
 
-        if self.compress:
+        n = len(current_elements)  # assuming current_elements and previous_elements have the same length
+        m = round(math.sqrt(2*n))
 
-            # self.X = self.rng.choice(
-            #    merged, size=int(np.log2(self.capacity)), replace=False
-            # )
-            capacity = previous.capacity + current.capacity
-            
-            size = int(np.log2(capacity))
-            if self.min_size:
-                size = max(size,self.min_size)
-           
-            return self.merge_buckets(
-                bucket_list[:-2]
-                + [
-                    Bucket(
-                        self.rng.choice(
-                            np.vstack((previous.elements, current.elements)),
-                            size=min(size, len(previous.elements)+len(current.elements)),
-                            replace=False,
-                        ),
-                        #np.vstack((previous.elements, current.elements))[:int(np.ceil(np.log2(capacity)))],
-                        capacity=capacity,
-                        XX=XX,
-                        XY=XY,
-                        XX_str=XX_str,
-                        XY_str=XY_str,
-                        n_XX=n_XX,
-                        n_XY=n_XY,
-                    )
-                ]
-            )
+        m_idx = np.random.default_rng().integers(n, size=m)
+        merged_elements = np.concatenate(current_elements,previous_elements)
+        subsample = merged_elements[m_idx]
+        K_m = np.zeros((m, m))  # initialize the kernel matrix with zeros
+        for i in range(m):
+            for j in range(m):
+                # reshape to 2D array as rbf_kernel expects 2D array
+                a = subsample[i].reshape(1, -1)
+                b = subsample[j].reshape(1, -1)
+                K_m[i, j] = metrics.pairwise.rbf_kernel(a, b)
+        K_m_inv = la.pinv(K_m)
+        K_mn = np.zeros((n, m))
+        for i in range(m):
+            for j in range(n):
+                a = subsample[i].reshape(1, -1)
+                b = merged_elements[j].reshape(1, -1)
+                K_mn[i, j] = metrics.pairwise.rbf_kernel(a, b)
+        newWeights = (1/n) * K_m_inv @ K_mn @ np.ones((n, 1))
 
-        else:
+        return self.merge_buckets(
+            bucket_list[:-2]
+            + [
+                Bucket(
+                    elements=subsample,
+                    weights=newWeights,
+                    capacity=m,
+                )
+            ]
+        )
 
-            return self.merge_buckets(
-                bucket_list[:-2]
-                + [
-                    Bucket(
-                        np.vstack((previous.elements, current.elements)),
-                        capacity=previous.capacity + current.capacity,
-                        XX=XX,
-                        XY=XY,
-                        XX_str=XX_str,
-                        XY_str=XY_str,
-                        n_XX=n_XX,
-                        n_XY=n_XY,
-                    )
-                ]
-            )
 
     def get_changepoints(self):
         return np.cumsum(self.cps)
@@ -185,19 +158,14 @@ class BucketStream:
 
 
 class Bucket:
-    def __init__(self, elements, capacity, XX, XY, XX_str, XY_str, n_XX, n_XY):
+    def __init__(self, elements, capacity, weights):
         """ """
         self.elements = elements
         self.capacity = capacity
-        self.XX = XX
-        self.XY = XY
-        self.XX_str = XX_str
-        self.XY_str = XY_str
-        self.n_XX = n_XX
-        self.n_XY = n_XY
+        self.weights = weights
 
     def __str__(self):
-        return f"Elems:\t{self.elements}\nXX:\t{self.XX_str}\nXY:\t{self.XY_str}\nCapa:\t{self.capacity}\nn_XX:\t{self.n_XX}\nn_XY:\t{self.n_XY}"
+        return f"Elems:\t{self.elements}\nXX:\t{self.weights}"
 
 
 if __name__ == "__main__":
@@ -213,7 +181,7 @@ if __name__ == "__main__":
     print(bs)
     print(bs.buckets[0].XX)
 
-
+## Tests
 def k(x, y):
     squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
     return np.exp(-1 * squared_norm)

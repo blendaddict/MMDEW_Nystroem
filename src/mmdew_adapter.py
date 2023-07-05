@@ -1,6 +1,6 @@
 import numpy as np
 
-from detectors import RegionalDriftDetector, DriftDetector
+from mmdew.abstract import RegionalDriftDetector, DriftDetector
 from mmdew.bucket_stream2 import BucketStream
 from mmdew.mmd import MMD
 

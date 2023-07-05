@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn import metrics
-
-
+import numpy.linalg as la
+import math
 class MMD:
     def __init__(self, biased, gamma=1):
         """ """
@@ -26,6 +26,39 @@ class MMD:
                 + 1 / (n * (n - 1)) * np.sum(YY)
                 - 2 * XY.mean()
             )
+
+    def get_alpha(self, XX, X_mn, n):
+        return 1 / n * la.pinv(XX) @ X_mn @ np.ones((n, 1))
+
+    def get_bucket_content(self, X, m=0):
+        n = len(X)
+        if m == 0:
+            m = max(round(math.sqrt(n)), 1)
+        m_idx = np.random.default_rng().integers(n, size=m)
+        X_tilde = X[m_idx]
+        X_mn = metrics.pairwise.rbf_kernel(X_tilde, X)
+        alpha = self.get_alpha(self, X, X_mn, n)
+        return X_tilde, alpha, m
+
+    def nystroem_mmd(self, X, Y, m):
+        """Maximum Mean Discrepancy of approximator X and Y."""
+        n = len(X)
+        # m = int(m_magnitude(n))
+        m_idx = np.random.default_rng().integers(n, size=m)
+        X_tilde = X[m_idx]
+        Y_tilde = Y[m_idx]
+
+        XX = metrics.pairwise.rbf_kernel(X_tilde, X_tilde)
+        YY = metrics.pairwise.rbf_kernel(Y_tilde, Y_tilde)
+        XY = metrics.pairwise.rbf_kernel(X_tilde, Y_tilde)
+
+        X_mn = metrics.pairwise.rbf_kernel(X_tilde, X)
+        Y_mn = metrics.pairwise.rbf_kernel(Y_tilde, Y)
+
+        alpha_1 = self.get_alpha(self, XX, X_mn, n)
+        alpha_2 = self.get_alpha(self, YY, Y_mn, n)
+        return (alpha_1.T @ XX @ alpha_1 + alpha_2.T @ YY @ alpha_2 - 2 * alpha_1.T @ XY @ alpha_2)[0][0]
+
 
     def threshold(self, m, n, alpha=0.1):
         K = 1

@@ -6,7 +6,7 @@ import numpy as np
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import KBinsDiscretizer
-from changeds.abstract import ChangeStream
+from datasets import ChangeStream
 from tensorflow import keras
 
 def get_perm_for_cd(df):

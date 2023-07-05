@@ -1,7 +1,7 @@
 import numpy as np
 from collections import deque
 import time
-from mmdaw.mmd import MMD
+from mmd import MMD
 import matplotlib.pyplot as plt
 
 from sklearn.metrics.pairwise import rbf_kernel
