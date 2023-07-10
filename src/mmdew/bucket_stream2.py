@@ -6,10 +6,9 @@ from sklearn import metrics
 import numpy.linalg as la
 
 class BucketStream:
-    def __init__(self, gamma, compress=True, alpha=0.1, seed=1234, min_size=200):
+    def __init__(self, gamma,  alpha=0.1, seed=1234, min_size=200):
         """ """
         self.gamma = gamma
-        self.compress = compress
         self.alpha = alpha
         self.buckets = []
         self.maximum_mean_discrepancy = MMD(biased=True, gamma=gamma)
@@ -40,12 +39,16 @@ class BucketStream:
         start_weights = []
         end_elements = []
         end_weights = []
+        start_uncompressed_capacity = 0
+        end_uncompressed_capacity = 0
         for bucket in start:
             start_elements += bucket.elements
             start_weights += bucket.weights
+            start_uncompressed_capacity += bucket.uncompressed_capacity
         for bucket in end:
             end_elements += bucket.elements
             end_weights += bucket.weights
+            end_uncompressed_capacity += bucket.uncompressed_capacity
         start_capacity = len(start_elements)
         end_capacity = len(end_elements)
         start_weights = start_weights * (1/start_capacity)
@@ -64,7 +67,7 @@ class BucketStream:
                 addend_3 += start_weights[i] * end_weights[j] * metrics.pairwise.rbf_kernel(start_elements[i], end_elements[j])
         addend_3 = (-2) * addend_3
 
-        return addend_1 + addend_2 + addend_3
+        return addend_1 + addend_2 + addend_3, start_uncompressed_capacity, end_uncompressed_capacity
 
     def _is_change(self, split):
         distance, m, n = self.mmd(split)
@@ -74,15 +77,10 @@ class BucketStream:
     def _find_changes(self):
         for i in range(1, len(self.buckets)):
             if self._is_change(i):
-                if self.compress:
-                    position = np.sum([2**len(b.elements) for b in self.buckets[:i]])
-                else:
-                    position = np.sum([len(b.elements) for b in self.buckets[:i]])
+                position = np.sum([b.uncompressed_capacity for b in self.buckets[:i]])
                 self.cps = self.cps + [position]
                 self.buckets = self.buckets[i:]
-                for b in self.buckets:
-                    b.XY = b.XY[i:]
-                    b.n_XY = b.n_XY[i:]
+                #Warum return? Will man nicht mehrere CPs finden?
                 return
 
 
@@ -98,6 +96,8 @@ class BucketStream:
 
         n = len(current_elements)  # assuming current_elements and previous_elements have the same length
         m = round(math.sqrt(2*n))
+
+        combined_uncompressed_capacity = np.sum([b.uncompressed_capacity for b in current]) + np.sum([b.uncompressed_capacity for b in previous])
 
         m_idx = np.random.default_rng().integers(n, size=m)
         merged_elements = np.concatenate(current_elements,previous_elements)
@@ -116,15 +116,16 @@ class BucketStream:
                 a = subsample[i].reshape(1, -1)
                 b = merged_elements[j].reshape(1, -1)
                 K_mn[i, j] = metrics.pairwise.rbf_kernel(a, b)
-        newWeights = (1/n) * K_m_inv @ K_mn @ np.ones((n, 1))
+        new_weights = (1/n) * K_m_inv @ K_mn @ np.ones((n, 1))
 
         return self.merge_buckets(
             bucket_list[:-2]
             + [
                 Bucket(
                     elements=subsample,
-                    weights=newWeights,
+                    weights=new_weights,
                     capacity=m,
+                    uncompressed_capacity=combined_uncompressed_capacity
                 )
             ]
         )
@@ -179,10 +180,28 @@ class BucketStream:
 
 
 class Bucket:
-    def __init__(self, elements, capacity, weights):
-        """ """
+    def __init__(self, elements, capacity, weights, uncompressed_capacity=1):
+        """
+           A class used to represent a bucket of datapoints.
+
+           Attributes
+           ----------
+           elements : numpy.ndarray
+               A numpy array containing the elements (datapoints) in the bucket. This can be viewed as a vector.
+           capacity : int
+               The number of elements (datapoints) the bucket holds.
+           weights : numpy.ndarray
+               A numpy array containing the weights of the elements. These weights indicate the significance or importance
+               of each element during the calculation of the Maximum Mean Discrepancy (MMD). This can also be viewed as a vector.
+           uncompressed_capacity : int, optional
+               The total number of datapoints the bucket represents (default is 1).
+               This attribute is particularly useful when the bucket undergoes merging operations which might delete some datapoints,
+               but the bucket remains representative of all original datapoints.
+
+        """
         self.elements = elements
         self.capacity = capacity
+        self.uncompressed_capacity = uncompressed_capacity
         self.weights = weights
 
     def __str__(self):
