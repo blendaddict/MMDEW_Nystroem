@@ -33,17 +33,38 @@ class BucketStream:
     #ToDo: Delete function
     def mmd(self, split):
         """MMD of the buckets coming before `split` and the buckets coming after `split`, i.e., with 3 buckets and `split = 1` it returns `mmd(b_0, union b1 ... bn)`."""
-        start = self.merge_buckets(self.buckets[:split])
-        end = self.merge_buckets(self.buckets[split:])
+        start = self.buckets[:split]
+        end = self.buckets[split:]
 
-        m = len(start.elements)
-        n = len(end.elements)
+        start_elements = []
+        start_weights = []
+        end_elements = []
+        end_weights = []
+        for bucket in start:
+            start_elements += bucket.elements
+            start_weights += bucket.weights
+        for bucket in end:
+            end_elements += bucket.elements
+            end_weights += bucket.weights
+        start_capacity = len(start_elements)
+        end_capacity = len(end_elements)
+        start_weights = start_weights * (1/start_capacity)
+        end_weights = end_weights * (1/end_capacity)
+        addend_1 = 0
+        addend_2 = 0
+        addend_3 = 0
+        for i in range(start_capacity):
+            for j in range(start_capacity):
+                addend_1 += start_weights[i] * start_weights[j] * metrics.pairwise.rbf_kernel(start_elements[i],start_elements[j])
+        for i in range(end_capacity):
+            for j in range(end_capacity):
+                addend_2 += end_weights[i] * end_weights[j] * metrics.pairwise.rbf_kernel(end_elements[i],end_elements[j])
+        for i in range(start_capacity):
+            for j in range(end_capacity):
+                addend_3 += start_weights[i] * end_weights[j] * metrics.pairwise.rbf_kernel(start_elements[i], end_elements[j])
+        addend_3 = (-2) * addend_3
 
-
-
-        #return XX + YY - XY, m*1000, n*1000
-        return XX + YY - XY, int(np.sqrt(end.n_XX)), int(np.sqrt(start.n_XX)) #, XX, YY, XY
-  #      return XX + YY - XY, int(np.sqrt(end.n_XX)), int(np.sqrt(np.sum(end.n_XY))) #, XX, YY, XY
+        return addend_1 + addend_2 + addend_3
 
     def _is_change(self, split):
         distance, m, n = self.mmd(split)
