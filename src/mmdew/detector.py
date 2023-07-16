@@ -83,11 +83,10 @@ class Detector:
 
 
 class Bucket:
-    def __init__(self, gamma, capacity=1, compress=True):
+    def __init__(self, gamma, capacity=1):
         """ """
         self.gamma = gamma
         self.capacity = capacity
-        self.compress = compress
         self.XX = 0
         self.XY = 0
         self.data = np.array([])

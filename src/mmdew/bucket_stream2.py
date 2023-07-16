@@ -5,9 +5,11 @@ from .mmd import MMD
 from sklearn import metrics
 import numpy.linalg as la
 
+
 class BucketStream:
-    def __init__(self, gamma,  alpha=0.1, seed=1234, min_size=200):
+    def __init__(self, gamma,  alpha=0.1, seed=1234, min_size=200, apply_subsampling=True):
         """ """
+        self.apply_subsampling = apply_subsampling
         self.gamma = gamma
         self.alpha = alpha
         self.buckets = []
@@ -18,12 +20,12 @@ class BucketStream:
         self.min_size = min_size
 
     def insert(self, element):
-        subsample, weights, capacity = self.maximum_mean_discrepancy.get_bucket_content(element)
         self.buckets += [
             Bucket(
-                elements=subsample,
-                weights=weights,
-                capacity=capacity
+                elements=np.array([element]),
+                weights=np.array([1]),
+                capacity=1,
+                uncompressed_capacity=1
             )
         ]
         self._find_changes()
@@ -35,39 +37,32 @@ class BucketStream:
         start = self.buckets[:split]
         end = self.buckets[split:]
 
-        start_elements = []
-        start_weights = []
-        end_elements = []
-        end_weights = []
-        start_uncompressed_capacity = 0
-        end_uncompressed_capacity = 0
-        for bucket in start:
-            start_elements += bucket.elements
-            start_weights += bucket.weights
+        start_elements = start[0].elements
+        start_weights = start[0].weights
+        end_elements = end[0].elements
+        end_weights = end[0].weights
+        start_uncompressed_capacity = start[0].uncompressed_capacity
+        end_uncompressed_capacity = end[0].uncompressed_capacity
+        for bucket in start[1:]:
+            start_elements = np.concatenate((start_elements, bucket.elements))
+            start_weights += np.concatenate((start_weights, bucket.weights))
             start_uncompressed_capacity += bucket.uncompressed_capacity
-        for bucket in end:
-            end_elements += bucket.elements
-            end_weights += bucket.weights
+        for bucket in end[1:]:
+            end_elements.np.concatenate((end_elements, bucket.elements))
+            end_weights += np.concatenate((end_weights, bucket.weights))
             end_uncompressed_capacity += bucket.uncompressed_capacity
+        #
         start_capacity = len(start_elements)
         end_capacity = len(end_elements)
         start_weights = start_weights * (1/start_capacity)
         end_weights = end_weights * (1/end_capacity)
-        addend_1 = 0
-        addend_2 = 0
-        addend_3 = 0
-        for i in range(start_capacity):
-            for j in range(start_capacity):
-                addend_1 += start_weights[i] * start_weights[j] * metrics.pairwise.rbf_kernel(start_elements[i],start_elements[j])
-        for i in range(end_capacity):
-            for j in range(end_capacity):
-                addend_2 += end_weights[i] * end_weights[j] * metrics.pairwise.rbf_kernel(end_elements[i],end_elements[j])
-        for i in range(start_capacity):
-            for j in range(end_capacity):
-                addend_3 += start_weights[i] * end_weights[j] * metrics.pairwise.rbf_kernel(start_elements[i], end_elements[j])
-        addend_3 = (-2) * addend_3
 
-        return addend_1 + addend_2 + addend_3, start_uncompressed_capacity, end_uncompressed_capacity
+        breakpoint()
+        addend_1 = start_weights.T @ self.k(start_elements, start_elements) @ start_weights
+        addend_2 = end_weights.T @ self.k(end_elements, end_elements) @ end_weights
+        addend_3 = start_weights.T @ self.k(start_elements, end_elements) @ end_weights
+        breakpoint()
+        return addend_1 + addend_2 - 2 * addend_3, start_uncompressed_capacity, end_uncompressed_capacity
 
     def _is_change(self, split):
         distance, m, n = self.mmd(split)
@@ -76,6 +71,7 @@ class BucketStream:
 
     def _find_changes(self):
         for i in range(1, len(self.buckets)):
+
             if self._is_change(i):
                 position = np.sum([b.uncompressed_capacity for b in self.buckets[:i]])
                 self.cps = self.cps + [position]
@@ -93,30 +89,32 @@ class BucketStream:
 
         current_elements = current.elements
         previous_elements = previous.elements
+        n = len(current_elements)
+        joined_elements = np.concatenate((current_elements, previous_elements))
+        if self.apply_subsampling:
+            m = round(math.sqrt(2 * n))  # size of the subsample
+            m_idx = np.random.default_rng().integers(n, size=m)
+            subsample = joined_elements[m_idx]
+        else:
+            m = 2*n
+            subsample = joined_elements
+       # assuming current_elements and previous_elements have the same length
 
-        n = len(current_elements)  # assuming current_elements and previous_elements have the same length
-        m = round(math.sqrt(2*n))
 
-        combined_uncompressed_capacity = np.sum([b.uncompressed_capacity for b in current]) + np.sum([b.uncompressed_capacity for b in previous])
+        combined_uncompressed_capacity = current.uncompressed_capacity + previous.uncompressed_capacity
 
-        m_idx = np.random.default_rng().integers(n, size=m)
-        merged_elements = np.concatenate(current_elements,previous_elements)
-        subsample = merged_elements[m_idx]
-        K_m = np.zeros((m, m))  # initialize the kernel matrix with zeros
-        for i in range(m):
-            for j in range(m):
+
+
+        A = k(subsample, joined_elements)
+        #K_m = np.zeros((m, m))  # initialize the kernel matrix with zeros
+        #for i in range(m):
+            #for j in range(m):
                 # reshape to 2D array as rbf_kernel expects 2D array
-                a = subsample[i].reshape(1, -1)
-                b = subsample[j].reshape(1, -1)
-                K_m[i, j] = metrics.pairwise.rbf_kernel(a, b)
+
+        K_m = self.k(subsample, subsample)
         K_m_inv = la.pinv(K_m)
-        K_mn = np.zeros((n, m))
-        for i in range(m):
-            for j in range(n):
-                a = subsample[i].reshape(1, -1)
-                b = merged_elements[j].reshape(1, -1)
-                K_mn[i, j] = metrics.pairwise.rbf_kernel(a, b)
-        new_weights = (1/n) * K_m_inv @ K_mn @ np.ones((n, 1))
+
+        new_weights = .5 * K_m_inv @ A
 
         return self.merge_buckets(
             bucket_list[:-2]
@@ -144,9 +142,9 @@ class BucketStream:
             self._merge()
 
     def k(self, x, y):
-        #return np.dot(x,y)
-        squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
-        return np.exp(-self.gamma * squared_norm)
+        return metrics.pairwise.linear_kernel(x,y)
+        #squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
+        #return np.exp(-self.gamma * squared_norm)
 
     def xy(self, element):
         XY = []
@@ -205,7 +203,7 @@ class Bucket:
         self.weights = weights
 
     def __str__(self):
-        return f"Elems:\t{self.elements}\nXX:\t{self.weights}"
+        return f"Elems:\t{self.elements}\nWeights:\t{self.weights}\nUncomp_Cap:\t{self.uncompressed_capacity}"
 
 
 if __name__ == "__main__":
@@ -223,8 +221,7 @@ if __name__ == "__main__":
 
 ## Tests
 def k(x, y):
-    squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
-    return np.exp(-1 * squared_norm)
+    return metrics.pairwise.linear_kernel(x,y)
 
 
 def test_XX():

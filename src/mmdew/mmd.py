@@ -27,17 +27,24 @@ class MMD:
                 - 2 * XY.mean()
             )
 
-    def get_alpha(self, XX, X_mn, n):
+    def get_alpha(self, XX, X_mn, n=1):
         return 1 / n * la.pinv(XX) @ X_mn @ np.ones((n, 1))
 
-    def get_bucket_content(self, X, m=0):
-        n = len(X)
-        if m == 0:
-            m = max(round(math.sqrt(n)), 1)
-        m_idx = np.random.default_rng().integers(n, size=m)
-        X_tilde = X[m_idx]
-        X_mn = metrics.pairwise.rbf_kernel(X_tilde, X)
-        alpha = self.get_alpha(self, X, X_mn, n)
+    def get_bucket_content(self, element, m=0):
+        elements = np.array([element])
+        #X = X.reshape(1, -1)
+        print("le_X:")
+        print(elements)
+        print("le_X_shape:")
+        print(elements.shape)
+        #m_idx = np.random.default_rng().integers(n, size=m)
+        X_tilde = elements
+        X_mn = metrics.pairwise.rbf_kernel(X_tilde, elements)
+        XX = metrics.pairwise.rbf_kernel(X_tilde, X_tilde)
+        print("Le shapes")
+        print(X_mn.shape)
+        print(XX.shape)
+        alpha = self.get_alpha(XX, X_mn)
         return X_tilde, alpha, m
 
     def nystroem_mmd(self, X, Y, m):

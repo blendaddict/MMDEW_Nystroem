@@ -14,7 +14,7 @@ class MMDEWAdapter(DriftDetector):
         self.gamma=gamma
         self.alpha = alpha
         self.logger = None
-        self.detector = BucketStream(gamma=self.gamma, compress=True, alpha=self.alpha)
+        self.detector = BucketStream(gamma=self.gamma, alpha=self.alpha)
         self.element_count = 0
         super(MMDEWAdapter, self).__init__()
 
@@ -28,7 +28,7 @@ class MMDEWAdapter(DriftDetector):
         # hier können wir estimate_gamma ausführen
         self.gamma = MMD.estimate_gamma(data)
         #print(f"gamma: {self.gamma}")
-        self.detector = BucketStream(gamma=self.gamma, compress=True, alpha=self.alpha)
+        self.detector = BucketStream(gamma=self.gamma , alpha=self.alpha)
     
 
     def add_element(self, input_value):
@@ -37,7 +37,8 @@ class MMDEWAdapter(DriftDetector):
         :param input_value: The new observation
         :return:
         """
-
+        print("Adding Element:")
+        print(input_value)
         self.element_count+=1
         self.detected_cp = False
         prev_cps = len(self.detector.get_changepoints())
