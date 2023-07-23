@@ -15,6 +15,7 @@ class BucketStream:
         self.buckets = []
         self.maximum_mean_discrepancy = MMD(biased=True, gamma=gamma)
         self.cps = []
+        self.cps = []
         self.rng = np.random.default_rng(seed)
         self.logging=False
         self.min_size = min_size
@@ -30,6 +31,8 @@ class BucketStream:
         ]
         self._find_changes()
         self._merge()
+
+        k = "kek"
 
     #ToDo: Delete function
     def mmd(self, split):
@@ -57,19 +60,20 @@ class BucketStream:
         start_weights = start_weights * (1/start_capacity)
         end_weights = end_weights * (1/end_capacity)
 
-        breakpoint()
         addend_1 = start_weights.T @ self.k(start_elements, start_elements) @ start_weights
         addend_2 = end_weights.T @ self.k(end_elements, end_elements) @ end_weights
         addend_3 = start_weights.T @ self.k(start_elements, end_elements) @ end_weights
-        breakpoint()
+
         return addend_1 + addend_2 - 2 * addend_3, start_uncompressed_capacity, end_uncompressed_capacity
 
     def _is_change(self, split):
         distance, m, n = self.mmd(split)
+
         threshold = self.maximum_mean_discrepancy.threshold(m=m, n=n, alpha=self.alpha)
         return distance > threshold
 
     def _find_changes(self):
+
         for i in range(1, len(self.buckets)):
 
             if self._is_change(i):
@@ -89,6 +93,8 @@ class BucketStream:
 
         current_elements = current.elements
         previous_elements = previous.elements
+        current_weights = current.weights
+        previous_weights = previous.weights
         n = len(current_elements)
         joined_elements = np.concatenate((current_elements, previous_elements))
         if self.apply_subsampling:
@@ -102,10 +108,11 @@ class BucketStream:
 
 
         combined_uncompressed_capacity = current.uncompressed_capacity + previous.uncompressed_capacity
+        joined_weights = np.concatenate((current_weights, previous_weights))
+        K_z = k(subsample, joined_elements)
 
 
 
-        A = k(subsample, joined_elements)
         #K_m = np.zeros((m, m))  # initialize the kernel matrix with zeros
         #for i in range(m):
             #for j in range(m):
@@ -114,8 +121,7 @@ class BucketStream:
         K_m = self.k(subsample, subsample)
         K_m_inv = la.pinv(K_m)
 
-        new_weights = .5 * K_m_inv @ A
-
+        new_weights = .5 * K_m_inv @ K_z @ joined_weights
         return self.merge_buckets(
             bucket_list[:-2]
             + [
