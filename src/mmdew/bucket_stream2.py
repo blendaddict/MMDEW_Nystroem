@@ -32,7 +32,13 @@ class BucketStream:
         self._find_changes()
         self._merge()
 
-        k = "kek"
+
+    def k(self, x, y):
+
+        return metrics.pairwise.rbf_kernel(x,y, gamma=self.gamma)
+
+        #squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
+        #return np.exp(-self.gamma * squared_norm)
 
     #ToDo: Delete function
     def mmd(self, split):
@@ -48,13 +54,15 @@ class BucketStream:
         end_uncompressed_capacity = end[0].uncompressed_capacity
         for bucket in start[1:]:
             start_elements = np.concatenate((start_elements, bucket.elements))
-            start_weights += np.concatenate((start_weights, bucket.weights))
+            start_weights = np.concatenate((start_weights, bucket.weights))
             start_uncompressed_capacity += bucket.uncompressed_capacity
         for bucket in end[1:]:
-            end_elements.np.concatenate((end_elements, bucket.elements))
-            end_weights += np.concatenate((end_weights, bucket.weights))
+            end_elements = np.concatenate((end_elements, bucket.elements))
+            #breakpoint()
+            end_weights = np.concatenate((end_weights, bucket.weights))
             end_uncompressed_capacity += bucket.uncompressed_capacity
         #
+
         start_capacity = len(start_elements)
         end_capacity = len(end_elements)
         start_weights = start_weights * (1/start_capacity)
@@ -63,17 +71,18 @@ class BucketStream:
         addend_1 = start_weights.T @ self.k(start_elements, start_elements) @ start_weights
         addend_2 = end_weights.T @ self.k(end_elements, end_elements) @ end_weights
         addend_3 = start_weights.T @ self.k(start_elements, end_elements) @ end_weights
-
+        #print(f"split: {split} start_uncompressed_capacity: {start_uncompressed_capacity} und end_uncompressed_capacity: {end_uncompressed_capacity}")
         return addend_1 + addend_2 - 2 * addend_3, start_uncompressed_capacity, end_uncompressed_capacity
+
 
     def _is_change(self, split):
         distance, m, n = self.mmd(split)
 
         threshold = self.maximum_mean_discrepancy.threshold(m=m, n=n, alpha=self.alpha)
+        #print(f"Distance: {distance}, Threshold: {threshold}")
         return distance > threshold
 
     def _find_changes(self):
-
         for i in range(1, len(self.buckets)):
 
             if self._is_change(i):
@@ -109,7 +118,7 @@ class BucketStream:
 
         combined_uncompressed_capacity = current.uncompressed_capacity + previous.uncompressed_capacity
         joined_weights = np.concatenate((current_weights, previous_weights))
-        K_z = k(subsample, joined_elements)
+        K_z = self.k(subsample, joined_elements)
 
 
 
@@ -143,14 +152,11 @@ class BucketStream:
             return
         current = self.buckets[-1]
         previous = self.buckets[-2]
-        if previous.capacity == current.capacity:
+        if previous.uncompressed_capacity == current.uncompressed_capacity:
             self.buckets = self.buckets[:-2] + [self.merge_buckets(self.buckets[-2:])]
             self._merge()
 
-    def k(self, x, y):
-        return metrics.pairwise.linear_kernel(x,y)
-        #squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
-        #return np.exp(-self.gamma * squared_norm)
+
 
     def xy(self, element):
         XY = []
@@ -218,7 +224,7 @@ if __name__ == "__main__":
     bs.insert(np.array([2]))
     bs.insert(np.array([3]))
     bs.insert(np.array([4]))
-    # bs.insert(5)
+    bs.insert(5)
     # bs.insert(6)
     # bs.insert(7)
     # bs.insert(8)
@@ -226,8 +232,7 @@ if __name__ == "__main__":
     print(bs.buckets[0].XX)
 
 ## Tests
-def k(x, y):
-    return metrics.pairwise.linear_kernel(x,y)
+
 
 
 def test_XX():

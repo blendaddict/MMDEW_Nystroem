@@ -66,8 +66,7 @@ class MMD:
         alpha_2 = self.get_alpha(self, YY, Y_mn, n)
         return (alpha_1.T @ XX @ alpha_1 + alpha_2.T @ YY @ alpha_2 - 2 * alpha_1.T @ XY @ alpha_2)[0][0]
 
-
-    def threshold(self, m, n, alpha=0.1):
+    def threshold(self, m, n, alpha):
         K = 1
         if self.biased:
             thresh = (
@@ -95,11 +94,14 @@ class MMD:
         return self.mmd(X, Y) < self.threshold(len(X), len(Y), alpha=alpha)
 
     @staticmethod
-    def estimate_gamma(X, n_samples=200, seed=1234):
+    def estimate_gamma(X, max_len=500):
         """Estimate the gamma parameter based on the median heuristic for sigma**2."""
-        rng = np.random.default_rng(seed)
-        distances = []
-        for _ in range(n_samples):
-            distances += [np.linalg.norm(rng.choice(X, size=2)) ** 2]
-            sigma = np.median(distances)
-        return 1 / np.sqrt(2 * sigma) if sigma > 0 else 1
+
+        n = min(len(X), max_len)
+        dists = []
+        for i in range(n):
+            for j in range(i, n):
+                dists += [np.linalg.norm(X[i] - X[j], ord=2) ** 2]
+        bw = np.median(dists)
+        return np.sqrt(bw * 0.5)
+

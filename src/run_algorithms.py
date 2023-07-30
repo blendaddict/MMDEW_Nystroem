@@ -11,6 +11,7 @@ import uuid
 from sklearn.model_selection import ParameterGrid
 from joblib import Parallel, delayed
 import numpy as np
+import mmdew.metrics
 
 
 
@@ -21,6 +22,8 @@ from sklearn.preprocessing import KBinsDiscretizer
 #from scanb_adapter import ScanB
 #from newma_adapter import NewMA
 from data import *
+from mmdew import metrics
+
 
 def preprocess(x):
     return preprocessing.minmax_scale(x)
@@ -106,6 +109,8 @@ class Task:
             "timeout": [False],
             "runtime": [time() - started_at]
         }
+        #T = anzahl data points / (anzahl changepoints +1)
+        print(f"{detector.name()} on dataset {self.dataset.id()}: {metrics.fb_score(true_cps=actual_cps, reported_cps=detected_cps_at, T=(10299 / 6))} with parameters: {detector.parameter_str()}, NUM_CPS: {len(detected_cps_at)}")
 
         df = pd.DataFrame.from_dict(result)
         df.to_csv(result_name)
@@ -143,7 +148,7 @@ class Experiment:
 
 if __name__ == "__main__":
     parameter_choices = {
-        MMDEWAdapter: {"gamma": [1], "alpha": [0.01, 0.1]},
+        MMDEWAdapter: {"gamma": [1], "alpha": [0.9, 0.5, 0.1, 1e-9, 1e-22]},
         #AdwinK: {"k": [10e-5, 0.01, 0.02, 0.05, 0.1, 0.2,.9999], "delta": [0.05, .1, .2, .5, .9, .99 ] },
         #WATCH: {
         #    "kappa": [25,50,100],
@@ -184,13 +189,13 @@ if __name__ == "__main__":
     }
 
     max_len = None
-    n_reps = 3
+    n_reps = 1
 
     datasets = [
-        GasSensors(preprocess=preprocess, max_len=max_len),
+        #GasSensors(preprocess=preprocess, max_len=max_len),
         #MNIST(preprocess=preprocess, max_len=max_len),
         #FashionMNIST(preprocess=preprocess, max_len=max_len),
-        #HAR(preprocess=preprocess, max_len=max_len),
+        HAR(preprocess=preprocess, max_len=max_len),
         #CIFAR10(preprocess=preprocess, max_len=max_len),
         #TrafficUnif(preprocess=preprocess, max_len=max_len),
     ]

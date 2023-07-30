@@ -37,8 +37,7 @@ class MMDEWAdapter(DriftDetector):
         :param input_value: The new observation
         :return:
         """
-        print("Adding Element:")
-        print(input_value)
+
         self.element_count+=1
         self.detected_cp = False
         prev_cps = len(self.detector.get_changepoints())
