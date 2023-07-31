@@ -1,111 +1,95 @@
-import math
-
 import numpy as np
 from .mmd import MMD
 from sklearn import metrics
-import numpy.linalg as la
 
 
 class BucketStream:
-    def __init__(self, gamma,  alpha=0.1, seed=1234, min_size=200, apply_subsampling=True):
+    def __init__(self, gamma, compress=True, alpha=0.1, seed=1234, min_size=200):
         """ """
-        self.apply_subsampling = apply_subsampling
         self.gamma = gamma
+        self.compress = compress
         self.alpha = alpha
         self.buckets = []
         self.maximum_mean_discrepancy = MMD(biased=True, gamma=gamma)
-        self.cps = []
         self.cps = []
         self.rng = np.random.default_rng(seed)
         self.logging=False
         self.min_size = min_size
 
     def insert(self, element):
+        XX = self.k(element, element)
+        XX_str = self.str_k(element, element) if self.logging else ""
+        XY, n_XY = self.xy(element)
+        XY_str = self.str_xy(element) if self.logging else ""
         self.buckets += [
             Bucket(
-                elements=np.array([element]),
-                weights=np.array([1]),
+                np.array(element).reshape(1, -1),
                 capacity=1,
-                uncompressed_capacity=1
+                XX=XX,
+                XY=XY,
+                XX_str=XX_str,
+                XY_str=XY_str,
+                n_XX=1,
+                n_XY=n_XY,
             )
         ]
         self._find_changes()
         self._merge()
 
-    #only for testing purposes
     def insert_no_cut(self, element):
+        XX = self.k(element, element)
+        XX_str = self.str_k(element, element) if self.logging else ""
+        XY, n_XY = self.xy(element)
+        XY_str = self.str_xy(element) if self.logging else ""
         self.buckets += [
             Bucket(
-                elements=np.array([element]),
-                weights=np.array([1]),
+                np.array(element).reshape(1, -1),
                 capacity=1,
-                uncompressed_capacity=1
+                XX=XX,
+                XY=XY,
+                XX_str=XX_str,
+                XY_str=XY_str,
+                n_XX=1,
+                n_XY=n_XY,
             )
         ]
         self._merge()
 
-
-    def k(self, x, y):
-
-        return metrics.pairwise.rbf_kernel(x,y, gamma=self.gamma)
-
-        #squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
-        #return np.exp(-self.gamma * squared_norm)
-
-    #ToDo: Delete function
     def mmd(self, split):
         """MMD of the buckets coming before `split` and the buckets coming after `split`, i.e., with 3 buckets and `split = 1` it returns `mmd(b_0, union b1 ... bn)`."""
-        start = self.buckets[:split]
-        end = self.buckets[split:]
+        start = self.merge_buckets(self.buckets[:split])
+        end = self.merge_buckets(self.buckets[split:])
 
-        start_elements = start[0].elements
-        start_weights = start[0].weights
-        end_elements = end[0].elements
-        end_weights = end[0].weights
-        start_uncompressed_capacity = start[0].uncompressed_capacity
-        end_uncompressed_capacity = end[0].uncompressed_capacity
-        for bucket in start[1:]:
-            start_elements = np.concatenate((start_elements, bucket.elements))
-            start_weights = np.concatenate((start_weights, bucket.weights))
-            start_uncompressed_capacity += bucket.uncompressed_capacity
-        for bucket in end[1:]:
-            end_elements = np.concatenate((end_elements, bucket.elements))
-            #breakpoint()
-            end_weights = np.concatenate((end_weights, bucket.weights))
-            end_uncompressed_capacity += bucket.uncompressed_capacity
-        #
+        m = len(start.elements)
+        n = len(end.elements)
 
-        start_capacity = len(start_elements)
-        end_capacity = len(end_elements)
-        start_weights = start_weights * (1/start_capacity)
-        end_weights = end_weights * (1/end_capacity)
+        XX = 1 / start.n_XX * start.XX
+        YY = 1 / end.n_XX * end.XX
+#        print(np.sum(end.n_XY))
+        XY = 2 / np.sum(end.n_XY) * np.sum(end.XY)
 
-        addend_1 = start_weights.T @ self.k(start_elements, start_elements) @ start_weights
-        addend_2 = end_weights.T @ self.k(end_elements, end_elements) @ end_weights
-        addend_3 = start_weights.T @ self.k(start_elements, end_elements) @ end_weights
-        #print(f"split: {split} start_uncompressed_capacity: {start_uncompressed_capacity} und end_uncompressed_capacity: {end_uncompressed_capacity}")
-        return addend_1 + addend_2 - 2 * addend_3, start_uncompressed_capacity, end_uncompressed_capacity
-
+        #return XX + YY - XY, m*1000, n*1000
+        return XX + YY - XY, int(np.sqrt(end.n_XX)), int(np.sqrt(start.n_XX)) #, XX, YY, XY
+  #      return XX + YY - XY, int(np.sqrt(end.n_XX)), int(np.sqrt(np.sum(end.n_XY))) #, XX, YY, XY
 
     def _is_change(self, split):
         distance, m, n = self.mmd(split)
-
         threshold = self.maximum_mean_discrepancy.threshold(m=m, n=n, alpha=self.alpha)
-        #print(f"Distance: {distance}, Threshold: {threshold}")
         return distance > threshold
 
     def _find_changes(self):
         for i in range(1, len(self.buckets)):
-
             if self._is_change(i):
-                position = np.sum([b.uncompressed_capacity for b in self.buckets[:i]])
+                if self.compress:
+                    position = np.sum([2**len(b.elements) for b in self.buckets[:i]])
+                else:
+                    position = np.sum([len(b.elements) for b in self.buckets[:i]])
                 self.cps = self.cps + [position]
                 self.buckets = self.buckets[i:]
-                #Warum return? Will man nicht mehrere CPs finden?
+                for b in self.buckets:
+                    b.XY = b.XY[i:]
+                    b.n_XY = b.n_XY[i:]
                 return
-
-
-
 
     def merge_buckets(self, bucket_list):
         """Merges the buckets in `bucket_list` such that one bucket remains with XX, and XY such that their values correspond to the case that all data would have been in this bucket."""
@@ -114,51 +98,62 @@ class BucketStream:
         current = bucket_list[-1]
         previous = bucket_list[-2]
 
-        current_elements = current.elements
-        previous_elements = previous.elements
-        current_weights = current.weights
-        previous_weights = previous.weights
-        n = len(current_elements)
-        joined_elements = np.concatenate((current_elements, previous_elements))
-        #subsampling seems to be too extreme. Maybe select less aggressively
-        #maybe choose combined uncompressed capacity as n which would probably not contradict the chatalic paper
-        if self.apply_subsampling:
-            m = round(math.sqrt(2 * n))  # size of the subsample
-            m_idx = np.random.default_rng().integers(n, size=m)
-            subsample = joined_elements[m_idx]
+        XX = previous.XX + current.XX + 2 * current.XY[-1]
+        n_XX = previous.n_XX + current.n_XX + 2 * current.n_XY[-1]
+        XX_str = previous.XX_str + current.XX_str + 2 * current.XY_str[-1] if self.logging else ""
+        XY = np.array(previous.XY) + np.array(current.XY[:-1])
+        n_XY = np.array(previous.n_XY) + np.array(current.n_XY[:-1])
+        XY_str = [p + c for p, c in zip(previous.XY_str, current.XY_str[:-1])] if self.logging else ""
+
+        if self.compress:
+
+            # self.X = self.rng.choice(
+            #    merged, size=int(np.log2(self.capacity)), replace=False
+            # )
+            capacity = previous.capacity + current.capacity
+
+            size = int(np.log2(capacity))
+            if self.min_size:
+                size = max(size,self.min_size)
+
+            return self.merge_buckets(
+                bucket_list[:-2]
+                + [
+                    Bucket(
+                        self.rng.choice(
+                            np.vstack((previous.elements, current.elements)),
+                            size=min(size, len(previous.elements)+len(current.elements)),
+                            replace=False,
+                        ),
+                        #np.vstack((previous.elements, current.elements))[:int(np.ceil(np.log2(capacity)))],
+                        capacity=capacity,
+                        XX=XX,
+                        XY=XY,
+                        XX_str=XX_str,
+                        XY_str=XY_str,
+                        n_XX=n_XX,
+                        n_XY=n_XY,
+                    )
+                ]
+            )
+
         else:
-            m = 2*n
-            subsample = joined_elements
-       # assuming current_elements and previous_elements have the same length
 
-
-        combined_uncompressed_capacity = current.uncompressed_capacity + previous.uncompressed_capacity
-        joined_weights = np.concatenate((current_weights, previous_weights))
-        K_z = self.k(subsample, joined_elements)
-
-
-
-        #K_m = np.zeros((m, m))  # initialize the kernel matrix with zeros
-        #for i in range(m):
-            #for j in range(m):
-                # reshape to 2D array as rbf_kernel expects 2D array
-
-        K_m = self.k(subsample, subsample)
-        K_m_inv = la.pinv(K_m)
-
-        new_weights = .5 * K_m_inv @ K_z @ joined_weights
-        return self.merge_buckets(
-            bucket_list[:-2]
-            + [
-                Bucket(
-                    elements=subsample,
-                    weights=new_weights,
-                    capacity=m,
-                    uncompressed_capacity=combined_uncompressed_capacity
-                )
-            ]
-        )
-
+            return self.merge_buckets(
+                bucket_list[:-2]
+                + [
+                    Bucket(
+                        np.vstack((previous.elements, current.elements)),
+                        capacity=previous.capacity + current.capacity,
+                        XX=XX,
+                        XY=XY,
+                        XX_str=XX_str,
+                        XY_str=XY_str,
+                        n_XX=n_XX,
+                        n_XY=n_XY,
+                    )
+                ]
+            )
 
     def get_changepoints(self):
         return np.cumsum(self.cps)
@@ -168,11 +163,14 @@ class BucketStream:
             return
         current = self.buckets[-1]
         previous = self.buckets[-2]
-        if previous.uncompressed_capacity == current.uncompressed_capacity:
+        if previous.capacity == current.capacity:
             self.buckets = self.buckets[:-2] + [self.merge_buckets(self.buckets[-2:])]
             self._merge()
 
-
+    def k(self, x, y):
+        #return np.dot(x,y)
+        squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
+        return np.exp(-self.gamma * squared_norm)
 
     def xy(self, element):
         XY = []
@@ -206,32 +204,19 @@ class BucketStream:
 
 
 class Bucket:
-    def __init__(self, elements, capacity, weights, uncompressed_capacity=1):
-        """
-           A class used to represent a bucket of datapoints.
-
-           Attributes
-           ----------
-           elements : numpy.ndarray
-               A numpy array containing the elements (datapoints) in the bucket. This can be viewed as a vector.
-           capacity : int
-               The number of elements (datapoints) the bucket holds.
-           weights : numpy.ndarray
-               A numpy array containing the weights of the elements. These weights indicate the significance or importance
-               of each element during the calculation of the Maximum Mean Discrepancy (MMD). This can also be viewed as a vector.
-           uncompressed_capacity : int, optional
-               The total number of datapoints the bucket represents (default is 1).
-               This attribute is particularly useful when the bucket undergoes merging operations which might delete some datapoints,
-               but the bucket remains representative of all original datapoints.
-
-        """
+    def __init__(self, elements, capacity, XX, XY, XX_str, XY_str, n_XX, n_XY):
+        """ """
         self.elements = elements
         self.capacity = capacity
-        self.uncompressed_capacity = uncompressed_capacity
-        self.weights = weights
+        self.XX = XX
+        self.XY = XY
+        self.XX_str = XX_str
+        self.XY_str = XY_str
+        self.n_XX = n_XX
+        self.n_XY = n_XY
 
     def __str__(self):
-        return f"Elems:\t{self.elements}\nWeights:\t{self.weights}\nUncomp_Cap:\t{self.uncompressed_capacity}"
+        return f"Elems:\t{self.elements}\nXX:\t{self.XX_str}\nXY:\t{self.XY_str}\nCapa:\t{self.capacity}\nn_XX:\t{self.n_XX}\nn_XY:\t{self.n_XY}"
 
 
 if __name__ == "__main__":
@@ -240,15 +225,17 @@ if __name__ == "__main__":
     bs.insert(np.array([2]))
     bs.insert(np.array([3]))
     bs.insert(np.array([4]))
-    bs.insert(5)
+    # bs.insert(5)
     # bs.insert(6)
     # bs.insert(7)
     # bs.insert(8)
     print(bs)
     print(bs.buckets[0].XX)
 
-## Tests
 
+def k(x, y):
+    squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
+    return np.exp(-1 * squared_norm)
 
 
 def test_XX():
