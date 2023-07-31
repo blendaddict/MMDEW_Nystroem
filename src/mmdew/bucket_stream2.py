@@ -32,6 +32,17 @@ class BucketStream:
         self._find_changes()
         self._merge()
 
+    #only for testing purposes
+    def insert_no_cut(self, element):
+        self.buckets += [
+            Bucket(
+                elements=np.array([element]),
+                weights=np.array([1]),
+                capacity=1,
+                uncompressed_capacity=1
+            )
+        ]
+        self._merge()
 
     def k(self, x, y):
 
@@ -89,6 +100,15 @@ class BucketStream:
                 position = np.sum([b.uncompressed_capacity for b in self.buckets[:i]])
                 self.cps = self.cps + [position]
                 self.buckets = self.buckets[i:]
+                #Warum return? Will man nicht mehrere CPs finden?
+                return
+    def _find_changes_no_cut(self):
+        for i in range(1, len(self.buckets)):
+
+            if self._is_change(i):
+                position = np.sum([b.uncompressed_capacity for b in self.buckets[:i]])
+                self.cps = self.cps + [position]
+
                 #Warum return? Will man nicht mehrere CPs finden?
                 return
 
