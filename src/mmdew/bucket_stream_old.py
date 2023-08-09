@@ -169,8 +169,9 @@ class BucketStream:
 
     def k(self, x, y):
         #return np.dot(x,y)
-        squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
-        return np.exp(-self.gamma * squared_norm)
+        return metrics.pairwise.linear_kernel(x,y)
+        #squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
+        #return np.exp(-self.gamma * squared_norm)
 
     def xy(self, element):
         XY = []
