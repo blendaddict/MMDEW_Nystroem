@@ -20,11 +20,13 @@ class BucketStream:
         self.logging=False
         self.min_size = min_size
 
+        #remove this after testing:
+        self.started_ss = False
     def insert(self, element):
         self.buckets += [
             Bucket(
-                elements=np.array([element]),
-                weights=np.array([1]),
+                elements=np.array(element).reshape(-1,1),
+                weights=np.array([1]).reshape(-1,1),
                 capacity=1,
                 uncompressed_capacity=1
             )
@@ -34,21 +36,25 @@ class BucketStream:
 
     #only for testing purposes
     def insert_no_cut(self, element):
+        #breakpoint()
         self.buckets += [
             Bucket(
-                elements=np.array([element]),
-                weights=np.array([1]),
+                elements=np.array(element).reshape(1,-1),
+                weights=np.array(1).reshape(1,-1),
                 capacity=1,
                 uncompressed_capacity=1
             )
         ]
+        #breakpoint()
         self._merge()
+        #breakpoint()
+        kek = "test"
 
 
     def k(self, x, y):
 
         #return metrics.pairwise.rbf_kernel(x,y, gamma=self.gamma)
-        return metrics.pairwise.linear_kernel(x,y )
+        return metrics.pairwise.linear_kernel(x,y)
         #squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
         #return np.exp(-self.gamma * squared_norm)
 
@@ -57,21 +63,24 @@ class BucketStream:
         """MMD of the buckets coming before `split` and the buckets coming after `split`, i.e., with 3 buckets and `split = 1` it returns `mmd(b_0, union b1 ... bn)`."""
         start = self.buckets[:split]
         end = self.buckets[split:]
-
+        #breakpoint()
         start_elements = start[0].elements
-        start_weights = start[0].weights
+        start_weights = start[0].weights * len(start[0].weights)
         end_elements = end[0].elements
-        end_weights = end[0].weights
+        end_weights = end[0].weights * len(end[0].weights)
         start_uncompressed_capacity = start[0].uncompressed_capacity
         end_uncompressed_capacity = end[0].uncompressed_capacity
+        #breakpoint()
         for bucket in start[1:]:
+            #breakpoint()
             start_elements = np.concatenate((start_elements, bucket.elements))
-            start_weights = np.concatenate((start_weights, bucket.weights))
+            start_weights = np.concatenate((start_weights, bucket.weights * len(bucket.weights)))
             start_uncompressed_capacity += bucket.uncompressed_capacity
         for bucket in end[1:]:
+            #breakpoint()
             end_elements = np.concatenate((end_elements, bucket.elements))
             #breakpoint()
-            end_weights = np.concatenate((end_weights, bucket.weights))
+            end_weights = np.concatenate((end_weights, bucket.weights * len(bucket.weights)))
             end_uncompressed_capacity += bucket.uncompressed_capacity
         #
 
@@ -79,12 +88,13 @@ class BucketStream:
         end_capacity = len(end_elements)
         start_weights = start_weights * (1/start_capacity)
         end_weights = end_weights * (1/end_capacity)
-
+        #breakpoint()
         addend_1 = start_weights.T @ self.k(start_elements, start_elements) @ start_weights
         addend_2 = end_weights.T @ self.k(end_elements, end_elements) @ end_weights
         addend_3 = start_weights.T @ self.k(start_elements, end_elements) @ end_weights
+
         #print(f"split: {split} start_uncompressed_capacity: {start_uncompressed_capacity} und end_uncompressed_capacity: {end_uncompressed_capacity}")
-        return addend_1 + addend_2 - 2 * addend_3, start_uncompressed_capacity, end_uncompressed_capacity
+        return (addend_1 + addend_2 - (2 * addend_3))[0][0], start_uncompressed_capacity, end_uncompressed_capacity
 
 
     def _is_change(self, split):
@@ -122,18 +132,29 @@ class BucketStream:
         joined_elements = np.concatenate((current_elements, previous_elements))
         #subsampling seems to be too extreme. Maybe select less aggressively
         #maybe choose combined uncompressed capacity as n which would probably not contradict the chatalic paper
+        #breakpoint()
         if self.apply_subsampling:
-            m = round(math.sqrt(2 * n))  # size of the subsample
-            m_idx = np.random.default_rng().integers(n, size=m)
-            subsample = joined_elements[m_idx]
+            if current.uncompressed_capacity <= 8:
+
+                m = len(joined_elements)
+                subsample = joined_elements
+
+            else:
+                if not self.started_ss :
+                    self.started_ss = True
+                    print(f"started subsampling at calculation of merge to size: {current.uncompressed_capacity * 2}")
+                m = round(math.sqrt(2 * current.uncompressed_capacity))  # size of the subsample
+                m_idx = np.random.default_rng().integers(n, size=m)
+                subsample = joined_elements[m_idx]
         else:
             m = 2*n
             subsample = joined_elements
        # assuming current_elements and previous_elements have the same length
 
 
-        combined_uncompressed_capacity = current.uncompressed_capacity + previous.uncompressed_capacity
+        combined_uncompressed_capacity = 2*current.uncompressed_capacity
         joined_weights = np.concatenate((current_weights, previous_weights))
+        #breakpoint()
         K_z = self.k(subsample, joined_elements)
 
 
@@ -145,7 +166,7 @@ class BucketStream:
 
         K_m = self.k(subsample, subsample)
         K_m_inv = la.pinv(K_m)
-
+        #breakpoint()
         new_weights = .5 * K_m_inv @ K_z @ joined_weights
         return self.merge_buckets(
             bucket_list[:-2]
