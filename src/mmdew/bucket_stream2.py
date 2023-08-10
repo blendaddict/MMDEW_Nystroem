@@ -128,8 +128,9 @@ class BucketStream:
         previous_elements = previous.elements
         current_weights = current.weights
         previous_weights = previous.weights
-        n = len(current_elements)
+
         joined_elements = np.concatenate((current_elements, previous_elements))
+        joined_uncompressed_capacity = current.uncompressed_capacity + previous.uncompressed_capacity
         #subsampling seems to be too extreme. Maybe select less aggressively
         #maybe choose combined uncompressed capacity as n which would probably not contradict the chatalic paper
         #breakpoint()
@@ -142,17 +143,16 @@ class BucketStream:
             else:
                 if not self.started_ss :
                     self.started_ss = True
-                    print(f"started subsampling at calculation of merge to size: {current.uncompressed_capacity * 2}")
-                m = round(math.sqrt(2 * current.uncompressed_capacity))  # size of the subsample
-                m_idx = np.random.default_rng().integers(n, size=m)
+                    #print(f"started subsampling at calculation of merge to size: {current.uncompressed_capacity * 2}")
+                m = round(math.sqrt(joined_uncompressed_capacity))  # size of the subsample
+                m_idx = np.random.default_rng().integers(len(joined_elements), size=m)
                 subsample = joined_elements[m_idx]
         else:
-            m = 2*n
+            m = joined_uncompressed_capacity
             subsample = joined_elements
        # assuming current_elements and previous_elements have the same length
 
 
-        combined_uncompressed_capacity = 2*current.uncompressed_capacity
         joined_weights = np.concatenate((current_weights, previous_weights))
         #breakpoint()
         K_z = self.k(subsample, joined_elements)
@@ -175,7 +175,7 @@ class BucketStream:
                     elements=subsample,
                     weights=new_weights,
                     capacity=m,
-                    uncompressed_capacity=combined_uncompressed_capacity
+                    uncompressed_capacity=joined_uncompressed_capacity
                 )
             ]
         )
