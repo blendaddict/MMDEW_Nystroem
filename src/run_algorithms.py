@@ -192,10 +192,10 @@ if __name__ == "__main__":
     n_reps = 1
 
     datasets = [
-        #GasSensors(preprocess=preprocess, max_len=max_len),
+        GasSensors(preprocess=preprocess, max_len=max_len),
         #MNIST(preprocess=preprocess, max_len=max_len),
         #FashionMNIST(preprocess=preprocess, max_len=max_len),
-        HAR(preprocess=preprocess, max_len=max_len),
+        #HAR(preprocess=preprocess, max_len=max_len),
         #CIFAR10(preprocess=preprocess, max_len=max_len),
         #TrafficUnif(preprocess=preprocess, max_len=max_len),
     ]

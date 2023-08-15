@@ -23,9 +23,13 @@ class BucketStream:
         #remove this after testing:
         self.started_ss = False
     def insert(self, element):
+        #print("inserting element")
+        #print(element.shape)
+        #print(np.array([element]).reshape(-1,1).shape)
+
         self.buckets += [
             Bucket(
-                elements=np.array(element).reshape(-1,1),
+                elements=np.array(element).reshape(1,-1),
                 weights=np.array([1]).reshape(-1,1),
                 capacity=1,
                 uncompressed_capacity=1
@@ -53,8 +57,8 @@ class BucketStream:
 
     def k(self, x, y):
 
-        #return metrics.pairwise.rbf_kernel(x,y, gamma=self.gamma)
-        return metrics.pairwise.linear_kernel(x,y)
+        return metrics.pairwise.rbf_kernel(x,y, gamma=self.gamma)
+        #return metrics.pairwise.linear_kernel(x,y)
         #squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
         #return np.exp(-self.gamma * squared_norm)
 
@@ -65,30 +69,30 @@ class BucketStream:
         end = self.buckets[split:]
         #breakpoint()
         start_elements = start[0].elements
-        start_weights = start[0].weights * len(start[0].weights)
+        start_weights = start[0].weights * start[0].uncompressed_capacity
         end_elements = end[0].elements
-        end_weights = end[0].weights * len(end[0].weights)
+        end_weights = end[0].weights * end[0].uncompressed_capacity
         start_uncompressed_capacity = start[0].uncompressed_capacity
         end_uncompressed_capacity = end[0].uncompressed_capacity
         #breakpoint()
         for bucket in start[1:]:
             #breakpoint()
             start_elements = np.concatenate((start_elements, bucket.elements))
-            start_weights = np.concatenate((start_weights, bucket.weights * len(bucket.weights)))
+            start_weights = np.concatenate((start_weights, bucket.weights * bucket.uncompressed_capacity))
             start_uncompressed_capacity += bucket.uncompressed_capacity
         for bucket in end[1:]:
-            #breakpoint()
+            # breakpoint()
             end_elements = np.concatenate((end_elements, bucket.elements))
-            #breakpoint()
-            end_weights = np.concatenate((end_weights, bucket.weights * len(bucket.weights)))
+            # breakpoint()
+            end_weights = np.concatenate((end_weights, bucket.weights * bucket.uncompressed_capacity))
             end_uncompressed_capacity += bucket.uncompressed_capacity
         #
 
-        start_capacity = len(start_elements)
-        end_capacity = len(end_elements)
-        start_weights = start_weights * (1/start_capacity)
-        end_weights = end_weights * (1/end_capacity)
-        #breakpoint()
+        start_weights = start_weights * (1 / start_uncompressed_capacity)
+        end_weights = end_weights * (1 / end_uncompressed_capacity)
+        print(start_weights.shape)
+        print(start_elements.shape)
+        print(self.k(start_elements, start_elements).shape)
         addend_1 = start_weights.T @ self.k(start_elements, start_elements) @ start_weights
         addend_2 = end_weights.T @ self.k(end_elements, end_elements) @ end_weights
         addend_3 = start_weights.T @ self.k(start_elements, end_elements) @ end_weights
@@ -134,19 +138,16 @@ class BucketStream:
         #subsampling seems to be too extreme. Maybe select less aggressively
         #maybe choose combined uncompressed capacity as n which would probably not contradict the chatalic paper
         #breakpoint()
-        if self.apply_subsampling:
-            if current.uncompressed_capacity <= 8:
+        if self.apply_subsampling and joined_uncompressed_capacity > 16:
 
-                m = len(joined_elements)
-                subsample = joined_elements
-
-            else:
-                if not self.started_ss :
-                    self.started_ss = True
-                    #print(f"started subsampling at calculation of merge to size: {current.uncompressed_capacity * 2}")
-                m = round(math.sqrt(joined_uncompressed_capacity))  # size of the subsample
-                m_idx = np.random.default_rng().integers(len(joined_elements), size=m)
-                subsample = joined_elements[m_idx]
+            if not self.started_ss :
+                self.started_ss = True
+                #print(f"started subsampling at calculation of merge to size: {current.uncompressed_capacity * 2}")
+            m = round(math.sqrt(joined_uncompressed_capacity))  # size of the subsample
+            #ToDo: uncomment this
+            #m_idx = np.random.default_rng().integers(len(joined_elements), size=m)
+            m_idx = range(0,m)
+            subsample = joined_elements[m_idx]
         else:
             m = joined_uncompressed_capacity
             subsample = joined_elements
