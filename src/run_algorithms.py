@@ -110,7 +110,7 @@ class Task:
             "runtime": [time() - started_at]
         }
         #T = anzahl data points / (anzahl changepoints +1)
-        print(f"{detector.name()} on dataset {self.dataset.id()}: {metrics.fb_score(true_cps=actual_cps, reported_cps=detected_cps_at, T=(10299 / 6))} with parameters: {detector.parameter_str()}, NUM_CPS: {len(detected_cps_at)}")
+        print(f"{detector.name()} on dataset {self.dataset.id()}: {metrics.fb_score(true_cps=actual_cps, reported_cps=detected_cps_at, T=(13910 / 6))} with parameters: {detector.parameter_str()}, NUM_CPS: {len(detected_cps_at)}")
 
         df = pd.DataFrame.from_dict(result)
         df.to_csv(result_name)

@@ -9,14 +9,16 @@ class MMD:
         self.gamma = gamma
 
     def mmd(self, X, Y):
+        #return "test"
         """Maximum Mean Discrepancy of X and Y."""
         if self.biased:
-            XX = metrics.pairwise.rbf_kernel(X, X, self.gamma)
-            YY = metrics.pairwise.rbf_kernel(Y, Y, self.gamma)
-            XY = metrics.pairwise.rbf_kernel(X, Y, self.gamma)
-            #XX = metrics.pairwise.linear_kernel(X,X)
-            #YY = metrics.pairwise.linear_kernel(Y,Y)
-            #XY = metrics.pairwise.linear_kernel(X,Y)
+            #XX = metrics.pairwise.rbf_kernel(X, X, self.gamma)
+            #YY = metrics.pairwise.rbf_kernel(Y, Y, self.gamma)
+            #XY = metrics.pairwise.rbf_kernel(X, Y, self.gamma)
+            XX = metrics.pairwise.linear_kernel(X,X)
+            YY = metrics.pairwise.linear_kernel(Y,Y)
+            XY = metrics.pairwise.linear_kernel(X,Y)
+
             return XX.mean() + YY.mean() - 2 * XY.mean()
         else:
             m = len(X)

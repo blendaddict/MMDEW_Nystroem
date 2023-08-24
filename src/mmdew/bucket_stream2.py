@@ -90,9 +90,9 @@ class BucketStream:
 
         start_weights = start_weights * (1 / start_uncompressed_capacity)
         end_weights = end_weights * (1 / end_uncompressed_capacity)
-        print(start_weights.shape)
-        print(start_elements.shape)
-        print(self.k(start_elements, start_elements).shape)
+        #print(start_weights.shape)
+        #print(start_elements.shape)
+        #print(self.k(start_elements, start_elements).shape)
         addend_1 = start_weights.T @ self.k(start_elements, start_elements) @ start_weights
         addend_2 = end_weights.T @ self.k(end_elements, end_elements) @ end_weights
         addend_3 = start_weights.T @ self.k(start_elements, end_elements) @ end_weights
@@ -439,3 +439,4 @@ def test_compression():
     for elem in data:
         bs.insert(elem)
     assert [256, 512] == list(bs.get_changepoints())
+
