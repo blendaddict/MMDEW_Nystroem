@@ -3,27 +3,31 @@ from sklearn import metrics
 import numpy.linalg as la
 import math
 class MMD:
-    def __init__(self, biased, gamma=1):
+    def __init__(self, biased, gamma=1, kernel = "rbf"):
         """ """
+        self.kernel = kernel
         self.biased = biased
         self.gamma = gamma
+
+    def k(self, x,y,gamma=1):
+        if self.kernel == "rbf":
+            return metrics.pairwise.rbf_kernel(x, y,gamma)
+        else:
+            return metrics.pairwise.linear_kernel(x,y)
 
     def mmd(self, X, Y):
         """Maximum Mean Discrepancy of X and Y."""
         if self.biased:
-            XX = metrics.pairwise.rbf_kernel(X, X, self.gamma)
-            YY = metrics.pairwise.rbf_kernel(Y, Y, self.gamma)
-            XY = metrics.pairwise.rbf_kernel(X, Y, self.gamma)
-            #XX = metrics.pairwise.linear_kernel(X,X)
-            #YY = metrics.pairwise.linear_kernel(Y,Y)
-            #XY = metrics.pairwise.linear_kernel(X,Y)
+            XX =  self.k(X, X, self.gamma)
+            YY =  self.k(Y, Y, self.gamma)
+            XY =  self.k(X, Y, self.gamma)
             return XX.mean() + YY.mean() - 2 * XY.mean()
         else:
             m = len(X)
             n = len(Y)
-            XX = metrics.pairwise.rbf_kernel(X, X, self.gamma) - np.identity(m)
-            YY = metrics.pairwise.rbf_kernel(Y, Y, self.gamma) - np.identity(n)
-            XY = metrics.pairwise.rbf_kernel(X, Y, self.gamma)
+            XX =  self.k(X, X, self.gamma) - np.identity(m)
+            YY =  self.k(Y, Y, self.gamma) - np.identity(n)
+            XY =  self.k(X, Y, self.gamma)
             return (
                 1 / (m * (m - 1)) * np.sum(XX)
                 + 1 / (n * (n - 1)) * np.sum(YY)
@@ -42,8 +46,8 @@ class MMD:
         print(elements.shape)
         #m_idx = np.random.default_rng().integers(n, size=m)
         X_tilde = elements
-        X_mn = metrics.pairwise.rbf_kernel(X_tilde, elements)
-        XX = metrics.pairwise.rbf_kernel(X_tilde, X_tilde)
+        X_mn =  self.k(X_tilde, elements)
+        XX = self.k(X_tilde, X_tilde)
         print("Le shapes")
         print(X_mn.shape)
         print(XX.shape)
@@ -58,15 +62,16 @@ class MMD:
         X_tilde = X[m_idx]
         Y_tilde = Y[m_idx]
 
-        XX = metrics.pairwise.rbf_kernel(X_tilde, X_tilde)
-        YY = metrics.pairwise.rbf_kernel(Y_tilde, Y_tilde)
-        XY = metrics.pairwise.rbf_kernel(X_tilde, Y_tilde)
+        XX = self.k(X_tilde, X_tilde)
+        YY = self.k(Y_tilde, Y_tilde)
+        XY =  self.k(X_tilde, Y_tilde)
 
-        X_mn = metrics.pairwise.rbf_kernel(X_tilde, X)
-        Y_mn = metrics.pairwise.rbf_kernel(Y_tilde, Y)
-
-        alpha_1 = self.get_alpha(self, XX, X_mn, n)
-        alpha_2 = self.get_alpha(self, YY, Y_mn, n)
+        X_mn = self.k(X_tilde, X)
+        Y_mn = self.k(Y_tilde, Y)
+       
+        alpha_1 = self.get_alpha( XX, X_mn, n)
+ 
+        alpha_2 = self.get_alpha( YY, Y_mn, n)
         return (alpha_1.T @ XX @ alpha_1 + alpha_2.T @ YY @ alpha_2 - 2 * alpha_1.T @ XY @ alpha_2)[0][0]
 
     def threshold(self, m, n, alpha):

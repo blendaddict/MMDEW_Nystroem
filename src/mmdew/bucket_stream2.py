@@ -57,6 +57,7 @@ class BucketStream:
 
     def k(self, x, y):
 
+        
         return metrics.pairwise.rbf_kernel(x,y, gamma=self.gamma)
         #return metrics.pairwise.linear_kernel(x,y)
         #squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
@@ -133,40 +134,40 @@ class BucketStream:
 
         joined_elements = np.concatenate((current_elements, previous_elements))
         joined_uncompressed_capacity = current.uncompressed_capacity + previous.uncompressed_capacity
+        joined_weights = np.concatenate((current_weights, previous_weights))
         #subsampling seems to be too extreme. Maybe select less aggressively
         #maybe choose combined uncompressed capacity as n which would probably not contradict the chatalic paper
         #breakpoint()
-        if self.apply_subsampling and joined_uncompressed_capacity > 16:
+        if self.apply_subsampling and joined_uncompressed_capacity > 64:
 
             if not self.started_ss :
                 self.started_ss = True
                 #print(f"started subsampling at calculation of merge to size: {current.uncompressed_capacity * 2}")
             m = round(math.sqrt(joined_uncompressed_capacity))  # size of the subsample
             #ToDo: uncomment this
-            #m_idx = np.random.default_rng().integers(len(joined_elements), size=m)
-            m_idx = range(0,m)
+            m_idx = np.random.default_rng().integers(len(joined_elements), size=m)
+            #m_idx = range(0,m)
             subsample = joined_elements[m_idx]
+            K_z = self.k(subsample, joined_elements)
+            #K_m = np.zeros((m, m))  # initialize the kernel matrix with zeros
+            #for i in range(m):
+                #for j in range(m):
+                    # reshape to 2D array as rbf_kernel expects 2D array
+
+            K_m = self.k(subsample, subsample)
+            K_m_inv = la.pinv(K_m)
+            #breakpoint()
+            new_weights = .5 * K_m_inv @ K_z @ joined_weights
         else:
             m = joined_uncompressed_capacity
             subsample = joined_elements
+            new_weights = .5 * joined_weights
        # assuming current_elements and previous_elements have the same length
 
 
-        joined_weights = np.concatenate((current_weights, previous_weights))
+        
         #breakpoint()
-        K_z = self.k(subsample, joined_elements)
-
-
-
-        #K_m = np.zeros((m, m))  # initialize the kernel matrix with zeros
-        #for i in range(m):
-            #for j in range(m):
-                # reshape to 2D array as rbf_kernel expects 2D array
-
-        K_m = self.k(subsample, subsample)
-        K_m_inv = la.pinv(K_m)
-        #breakpoint()
-        new_weights = .5 * K_m_inv @ K_z @ joined_weights
+       
         return self.merge_buckets(
             bucket_list[:-2]
             + [

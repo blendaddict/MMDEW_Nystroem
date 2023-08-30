@@ -4,8 +4,9 @@ from sklearn import metrics
 
 
 class BucketStream:
-    def __init__(self, gamma, compress=True, alpha=0.1, seed=1234, min_size=200):
+    def __init__(self, gamma, compress=True, alpha=0.1, seed=1234, min_size=200, kernel="rbf"):
         """ """
+        self.kernel = kernel
         self.gamma = gamma
         self.compress = compress
         self.alpha = alpha
@@ -168,8 +169,12 @@ class BucketStream:
             self._merge()
 
     def k(self, x, y):
+        if self.kernel == "rbf":
+            return metrics.pairwise.rbf_kernel(x,y)
+        else: 
+            return metrics.pairwise.linear_kernel(x,y)
         #return np.dot(x,y)
-        return metrics.pairwise.linear_kernel(x,y)
+       
         #squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
         #return np.exp(-self.gamma * squared_norm)
 
