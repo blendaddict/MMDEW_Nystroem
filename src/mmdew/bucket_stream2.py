@@ -38,6 +38,11 @@ class BucketStream:
         self._find_changes()
         self._merge()
 
+    
+    def inv(self, A, l=1e-8):
+        
+        return np.linalg.inv(A + l * np.identity(len(A))) 
+
     #only for testing purposes
     def insert_no_cut(self, element):
         #breakpoint()
@@ -155,7 +160,8 @@ class BucketStream:
                     # reshape to 2D array as rbf_kernel expects 2D array
 
             K_m = self.k(subsample, subsample)
-            K_m_inv = la.pinv(K_m)
+            
+            K_m_inv = self.inv(K_m)
             #breakpoint()
             new_weights = .5 * K_m_inv @ K_z @ joined_weights
         else:
