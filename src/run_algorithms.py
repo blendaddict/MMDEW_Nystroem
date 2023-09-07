@@ -110,7 +110,11 @@ class Task:
             "runtime": [time() - started_at]
         }
         #T = anzahl data points / (anzahl changepoints +1)
-        print(f"{detector.name()} on dataset {self.dataset.id()}: {metrics.fb_score(true_cps=actual_cps, reported_cps=detected_cps_at, T=(10299 / 6))} with parameters: {detector.parameter_str()}, NUM_CPS: {len(detected_cps_at)}")
+        #T Gas = (13910  / 6)
+        #T MNIST = (70000 / 10)
+        #T HAR = (10299 / 6)
+
+        print(f"{detector.name()} on dataset {self.dataset.id()}: {metrics.fb_score(true_cps=actual_cps, reported_cps=detected_cps_at, T=(70000 / 10))} with parameters: {detector.parameter_str()}, NUM_CPS: {len(detected_cps_at)}")
 
         df = pd.DataFrame.from_dict(result)
         df.to_csv(result_name)
@@ -146,9 +150,10 @@ class Experiment:
 
 
 
+
 if __name__ == "__main__":
     parameter_choices = {
-        MMDEWAdapter: {"gamma": [1], "alpha": [0.1, 1e-9, 1e-10, 1e-11, 1e-12, 1e-13, 1e-14, 1e-15, 1e-16, 1e-22]},
+        MMDEWAdapter: {"gamma": [1], "alpha": [1.0]},
         #AdwinK: {"k": [10e-5, 0.01, 0.02, 0.05, 0.1, 0.2,.9999], "delta": [0.05, .1, .2, .5, .9, .99 ] },
         #WATCH: {
         #    "kappa": [25,50,100],
@@ -192,8 +197,8 @@ if __name__ == "__main__":
     n_reps = 1
 
     datasets = [
-        GasSensors(preprocess=preprocess, max_len=max_len),
-        #MNIST(preprocess=preprocess, max_len=max_len),
+        #GasSensors(preprocess=preprocess, max_len=max_len),
+        MNIST(preprocess=preprocess, max_len=max_len),
         #FashionMNIST(preprocess=preprocess, max_len=max_len),
         #HAR(preprocess=preprocess, max_len=max_len),
         #CIFAR10(preprocess=preprocess, max_len=max_len),

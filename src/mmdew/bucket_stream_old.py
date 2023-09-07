@@ -1,12 +1,11 @@
 import numpy as np
-from .mmd import MMD
+from mmdew.mmd import MMD
 from sklearn import metrics
 
 
 class BucketStream:
-    def __init__(self, gamma, compress=True, alpha=0.1, seed=1234, min_size=200, kernel="rbf"):
+    def __init__(self, gamma, compress=True, alpha=0.1, seed=1234, min_size=200):
         """ """
-        self.kernel = kernel
         self.gamma = gamma
         self.compress = compress
         self.alpha = alpha
@@ -37,25 +36,6 @@ class BucketStream:
         self._find_changes()
         self._merge()
 
-    def insert_no_cut(self, element):
-        XX = self.k(element, element)
-        XX_str = self.str_k(element, element) if self.logging else ""
-        XY, n_XY = self.xy(element)
-        XY_str = self.str_xy(element) if self.logging else ""
-        self.buckets += [
-            Bucket(
-                np.array(element).reshape(1, -1),
-                capacity=1,
-                XX=XX,
-                XY=XY,
-                XX_str=XX_str,
-                XY_str=XY_str,
-                n_XX=1,
-                n_XY=n_XY,
-            )
-        ]
-        self._merge()
-
     def mmd(self, split):
         """MMD of the buckets coming before `split` and the buckets coming after `split`, i.e., with 3 buckets and `split = 1` it returns `mmd(b_0, union b1 ... bn)`."""
         start = self.merge_buckets(self.buckets[:split])
@@ -63,16 +43,17 @@ class BucketStream:
 
         m = len(start.elements)
         n = len(end.elements)
-
+  
         XX = 1 / start.n_XX * start.XX
         YY = 1 / end.n_XX * end.XX
 #        print(np.sum(end.n_XY))
         XY = 2 / np.sum(end.n_XY) * np.sum(end.XY)
 
         #return XX + YY - XY, m*1000, n*1000
-        return XX + YY - XY, int(np.sqrt(end.n_XX)), int(np.sqrt(start.n_XX)) #, XX, YY, XY
-  #      return XX + YY - XY, int(np.sqrt(end.n_XX)), int(np.sqrt(np.sum(end.n_XY))) #, XX, YY, XY
 
+        #return XX + YY - XY, int(np.sqrt(end.n_XX)), int(np.sqrt(start.n_XX))
+        return XX + YY - XY, min(np.sqrt(end.n_XX), np.sqrt(start.n_XX)), np.sum(end.n_XY)
+                
     def _is_change(self, split):
         distance, m, n = self.mmd(split)
         threshold = self.maximum_mean_discrepancy.threshold(m=m, n=n, alpha=self.alpha)
@@ -112,11 +93,11 @@ class BucketStream:
             #    merged, size=int(np.log2(self.capacity)), replace=False
             # )
             capacity = previous.capacity + current.capacity
-
+            
             size = int(np.log2(capacity))
             if self.min_size:
                 size = max(size,self.min_size)
-
+           
             return self.merge_buckets(
                 bucket_list[:-2]
                 + [
@@ -169,14 +150,9 @@ class BucketStream:
             self._merge()
 
     def k(self, x, y):
-        if self.kernel == "rbf":
-            return metrics.pairwise.rbf_kernel(x,y)
-        else: 
-            return metrics.pairwise.linear_kernel(x,y)
         #return np.dot(x,y)
-       
-        #squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
-        #return np.exp(-self.gamma * squared_norm)
+        squared_norm = np.dot(x, x) - 2 * np.dot(x, y) + np.dot(y, y)
+        return np.exp(-self.gamma * squared_norm)
 
     def xy(self, element):
         XY = []

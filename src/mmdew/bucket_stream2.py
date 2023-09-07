@@ -143,14 +143,16 @@ class BucketStream:
         #subsampling seems to be too extreme. Maybe select less aggressively
         #maybe choose combined uncompressed capacity as n which would probably not contradict the chatalic paper
         #breakpoint()
-        if self.apply_subsampling and joined_uncompressed_capacity > 64:
+        if self.apply_subsampling and joined_uncompressed_capacity > 1:
 
             if not self.started_ss :
                 self.started_ss = True
                 #print(f"started subsampling at calculation of merge to size: {current.uncompressed_capacity * 2}")
-            m = round(math.sqrt(joined_uncompressed_capacity))  # size of the subsample
-            #ToDo: uncomment this
+            m = math.ceil(math.sqrt(joined_uncompressed_capacity))  # size of the subsample
+            #ToDo: uncomment this to sample with replacement
+           
             m_idx = np.random.default_rng().integers(len(joined_elements), size=m)
+            #m_idx = np.random.default_rng().choice(len(joined_elements), size=m, replace=False)
             #m_idx = range(0,m)
             subsample = joined_elements[m_idx]
             K_z = self.k(subsample, joined_elements)

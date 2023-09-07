@@ -41,6 +41,11 @@ class MMDEWAdapter(DriftDetector):
         self.element_count+=1
         self.detected_cp = False
         prev_cps = len(self.detector.get_changepoints())
+        bsstring = ""
+        for i in range(0, len(self.detector.buckets)):
+           bsstring += "(" + str(self.detector.buckets[i].uncompressed_capacity) + " " + str(len(self.detector.buckets[i].weights)) + ")"
+
+        print(f"elements read: {self.element_count}, current bs stream length: {len(self.detector.buckets)} stream: {bsstring}")
         self.detector.insert(input_value[0])
         if len(self.detector.get_changepoints()) > prev_cps:
             self.delay = self.element_count - self.detector.get_changepoints()[-1]
