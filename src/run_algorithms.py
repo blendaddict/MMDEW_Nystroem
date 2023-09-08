@@ -153,7 +153,7 @@ class Experiment:
 
 if __name__ == "__main__":
     parameter_choices = {
-        MMDEWAdapter: {"gamma": [1], "alpha": [1.0]},
+        MMDEWAdapter: {"gamma": [1], "alpha": [1e-16]},
         #AdwinK: {"k": [10e-5, 0.01, 0.02, 0.05, 0.1, 0.2,.9999], "delta": [0.05, .1, .2, .5, .9, .99 ] },
         #WATCH: {
         #    "kappa": [25,50,100],
