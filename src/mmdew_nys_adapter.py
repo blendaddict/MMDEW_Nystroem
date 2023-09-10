@@ -1,10 +1,10 @@
 import numpy as np
 
 from mmdew.abstract import RegionalDriftDetector, DriftDetector
-from mmdew.bucket_stream_old import BucketStream
+from mmdew.bucket_stream2 import BucketStream
 from mmdew.mmd import MMD
 
-class MMDEWAdapter(DriftDetector):
+class MMDEW_Nys_Adapter(DriftDetector):
     def __init__(self, gamma, alpha=.1):
         """
         :param gamma: The scale of the data
@@ -16,10 +16,10 @@ class MMDEWAdapter(DriftDetector):
         self.logger = None
         self.detector = BucketStream(gamma=self.gamma, alpha=self.alpha)
         self.element_count = 0
-        super(MMDEWAdapter, self).__init__()
+        super(MMDEW_Nys_Adapter, self).__init__()
 
     def name(self) -> str:
-        return "MMDEW" 
+        return "MMDEW_nys" 
 
     def parameter_str(self) -> str:
         return r"$\alpha = {}$".format(self.alpha)

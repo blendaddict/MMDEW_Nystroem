@@ -1,6 +1,7 @@
 import psutil
 from time import time, strftime, gmtime
 from mmdew_adapter import MMDEWAdapter
+from mmdew_nys_adapter import MMDEW_Nys_Adapter
 import pathlib
 from sklearn import preprocessing
 #from detectors import D3
@@ -114,7 +115,7 @@ class Task:
         #T MNIST = (70000 / 10)
         #T HAR = (10299 / 6)
 
-        print(f"{detector.name()} on dataset {self.dataset.id()}: {metrics.fb_score(true_cps=actual_cps, reported_cps=detected_cps_at, T=(70000 / 10))} with parameters: {detector.parameter_str()}, NUM_CPS: {len(detected_cps_at)}")
+        print(f"{detector.name()} on dataset {self.dataset.id()}: {metrics.fb_score(true_cps=actual_cps, reported_cps=detected_cps_at, T=(13910  / 6))} with parameters: {detector.parameter_str()}, NUM_CPS: {len(detected_cps_at)}")
 
         df = pd.DataFrame.from_dict(result)
         df.to_csv(result_name)
@@ -154,6 +155,7 @@ class Experiment:
 if __name__ == "__main__":
     parameter_choices = {
         MMDEWAdapter: {"gamma": [1], "alpha": [1e-16]},
+        MMDEW_Nys_Adapter: {"gamma": [1], "alpha": [1e-12]},
         #AdwinK: {"k": [10e-5, 0.01, 0.02, 0.05, 0.1, 0.2,.9999], "delta": [0.05, .1, .2, .5, .9, .99 ] },
         #WATCH: {
         #    "kappa": [25,50,100],
@@ -194,11 +196,11 @@ if __name__ == "__main__":
     }
 
     max_len = None
-    n_reps = 1
+    n_reps = 10
 
     datasets = [
-        #GasSensors(preprocess=preprocess, max_len=max_len),
-        MNIST(preprocess=preprocess, max_len=max_len),
+        GasSensors(preprocess=preprocess, max_len=max_len),
+        #MNIST(preprocess=preprocess, max_len=max_len),
         #FashionMNIST(preprocess=preprocess, max_len=max_len),
         #HAR(preprocess=preprocess, max_len=max_len),
         #CIFAR10(preprocess=preprocess, max_len=max_len),
