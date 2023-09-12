@@ -12,7 +12,7 @@ class BucketStream:
         self.buckets = []
         self.maximum_mean_discrepancy = MMD(biased=True, gamma=gamma)
         self.cps = []
-        self.rng = np.random.default_rng(seed)
+        self.rng = np.random.default_rng()
         self.logging=False
         self.min_size = min_size
 

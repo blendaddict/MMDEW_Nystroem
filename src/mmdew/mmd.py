@@ -101,15 +101,22 @@ class MMD:
         """Test whether the distributions of X and Y are the same with significance alpha. True if both distributions are the same."""
         return self.mmd(X, Y) < self.threshold(len(X), len(Y), alpha=alpha)
 
+    
+
+    def est_nu(X, max_len=500):
+        n = min(len(X), max_len)
+        dists = []
+        for i in range(n):
+            for j in range(i,n):
+                dists += [np.linalg.norm(X[i]-X[j],ord=2)**2]
+        nu = np.median(dists)
+        return np.sqrt(nu*0.5)
+
+    def nu2gamma( nu):
+        return 1/(2*nu**2)
+
     @staticmethod
     def estimate_gamma(X, max_len=500):
         """Estimate the gamma parameter based on the median heuristic for sigma**2."""
 
-        n = min(len(X), max_len)
-        dists = []
-        for i in range(n):
-            for j in range(i, n):
-                dists += [np.linalg.norm(X[i] - X[j], ord=2) ** 2]
-        bw = np.median(dists)
-        return np.sqrt(bw * 0.5)
-
+        return MMD.nu2gamma(MMD.est_nu(X))
