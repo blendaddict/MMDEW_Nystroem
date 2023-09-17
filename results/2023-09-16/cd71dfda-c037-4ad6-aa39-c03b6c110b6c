@@ -1,0 +1,2 @@
+,algorithm,config,dataset,actual_cps,detected_cps,detected_cps_at,timeout,runtime
+0,MMDEW_nys,$\alpha = 1e-08$,FMNIST,"[7000, 14000, 21000, 28000, 35000, 42000, 49000, 56000, 63000]","[7167, 15359, 35839, 41983]","[8140, 20415, 36853, 43082]",False,2800.2108211517334

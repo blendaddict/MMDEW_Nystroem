@@ -1,0 +1,2 @@
+,algorithm,config,dataset,actual_cps,detected_cps,detected_cps_at,timeout,runtime
+0,NewMA,"$wsize=300, forget_factor=0.04, thresholding_quantile=0.999$",HAR,"[1906, 3850, 5572, 6978, 8755]",[],"[0, 1, 2, 3, 4, 5, 7, 575, 723, 900, 1393, 1746, 1747, 1910, 1911, 2445, 2815, 4706, 4707, 4708, 6458, 6983, 7519, 7520, 7521, 7522, 7755, 7756, 8187, 8343, 8757, 8758, 8759, 8760, 9628, 9629]",False,56.37493085861206

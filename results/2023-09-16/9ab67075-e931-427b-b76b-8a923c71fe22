@@ -1,0 +1,2 @@
+,algorithm,config,dataset,actual_cps,detected_cps,detected_cps_at,timeout,runtime
+0,NewMA,"$wsize=200, forget_factor=0.1, thresholding_quantile=0.9$",GasSensors,"[1936, 4945, 6778, 9704, 11345]",[],[],False,4.347436904907227

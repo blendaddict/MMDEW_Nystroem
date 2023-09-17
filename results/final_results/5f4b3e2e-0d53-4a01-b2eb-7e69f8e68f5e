@@ -1,0 +1,2 @@
+,algorithm,config,dataset,actual_cps,detected_cps,detected_cps_at,timeout,runtime
+0,NewMA,"$wsize=200, forget_factor=0.07, thresholding_quantile=0.999$",FMNIST,"[7000, 14000, 21000, 28000, 35000, 42000, 49000, 56000, 63000]",[],"[0, 1, 2, 6607, 7002, 8139, 8759, 9901, 10826, 14001, 15145, 16873, 30088, 34449, 36417, 54627, 56797, 58037, 60131, 66266, 69814]",False,278.00526213645935

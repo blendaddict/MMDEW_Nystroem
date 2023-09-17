@@ -20,8 +20,8 @@ import mmdew.metrics
 #from tensorflow import keras
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import KBinsDiscretizer
-from scanb_adapter import ScanB
-from newma_adapter import NewMA
+#from scanb_adapter import ScanB
+#from newma_adapter import NewMA
 from data import *
 from mmdew import metrics
 
@@ -68,7 +68,7 @@ class Task:
         cps = self.dataset._change_points
         true_cps = [i for i, x in enumerate(cps) if x]
         
-        print("changepoints are at", true_cps)
+        #print("changepoints are at", true_cps)
         actual_cps = []
         detected_cps = []
         detected_cps_at = (
@@ -118,6 +118,7 @@ class Task:
         #T Gas = (13910  / 6)
         #T MNIST = (70000 / 10)
         #T HAR = (10299 / 6)
+        #T CIF = 60000 / 10
 
         print(f"{detector.name()} on dataset {self.dataset.id()}: {metrics.fb_score(true_cps=actual_cps, reported_cps=detected_cps_at, T=(70000 / 10))} with parameters: {detector.parameter_str()}, NUM_CPS: {len(detected_cps_at)}")
 
@@ -158,8 +159,9 @@ class Experiment:
 
 if __name__ == "__main__":
     parameter_choices = {
-        #MMDEWAdapter: {"gamma": [1], "alpha": [1e-16]},
-        #MMDEW_Nys_Adapter: {"gamma": [1], "alpha": [.01, 1e-3, 1e-4, 1e-8, 1e-16]},
+        #.01, 1e-3, 1e-4, 1e-8, 1e-10, 1e-12, 1e-14, 1e-16, 1e-18, 1e-20, 1e-22
+        MMDEWAdapter: {"gamma": [1], "alpha": [1e-10]},
+        MMDEW_Nys_Adapter: {"gamma": [1], "alpha": [0.0001]},
         #AdwinK: {"k": [10e-5, 0.01, 0.02, 0.05, 0.1, 0.2,.9999], "delta": [0.05, .1, .2, .5, .9, .99 ] },
         #WATCH: {
         #    "kappa": [25,50,100],
@@ -177,21 +179,21 @@ if __name__ == "__main__":
         #    "tau": [0.7, 0.8, 0.9],
         #    "tree_depth": [1],
         #},  # tree_depths > 1 are too sensitive...
-        ScanB : {
-            "window_size" : [100], #[200,300]
-            "num_windows" : [3]
-            },
-        NewMA : {
-            "forget_factor" : [0.01,0.02,0.05,0.1],
-            "thresholding_quantile" : [0.99, 0.999],
-            "window_size": [20,50,100, 200, 300]
-            },
         # ScanB : {
-        #     "forget_factor" : [0.01,0.05],
-        #     "thresholding_quantile" : [0.99, 0.999],
-        #     "window_size": [20,50,100, 200,300]
-        #     "num_windows" : [2,3]
-        #     }
+        #     "window_size" : [100], #[200,300]
+        #     "num_windows" : [3]
+        #     },
+        NewMA : {
+            "forget_factor" : [0.06],
+            "thresholding_quantile" : [0.999],
+            "window_size": [20] #,200,300]
+            },
+        ScanB : {
+            "forget_factor" : [0.1],
+            "thresholding_quantile" : [0.99],
+            "window_size": [300], #,200,300]
+            "num_windows" : [3]
+            }
     }
 
     algorithms = {
@@ -199,8 +201,8 @@ if __name__ == "__main__":
         for alg in parameter_choices
     }
 
-    max_len = 14000
-    n_reps = 1
+    max_len = None
+    n_reps = 10
 
     datasets = [
         GasSensors(preprocess=preprocess, max_len=max_len),

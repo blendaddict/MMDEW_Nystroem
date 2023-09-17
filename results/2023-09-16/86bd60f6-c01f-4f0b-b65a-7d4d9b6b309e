@@ -1,0 +1,2 @@
+,algorithm,config,dataset,actual_cps,detected_cps,detected_cps_at,timeout,runtime
+0,ScanB,"$wsize = 200, numw = 3, thresholding_quantile=0.99, forget_factor=0.04$",GasSensors,"[2565, 4501, 7427, 10436, 12077]",[],"[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 520, 1066, 3217, 3218, 3948, 3949, 3950, 3951, 3952, 11389, 11390, 11391, 13607]",False,75.22192549705505

@@ -1,0 +1,2 @@
+,algorithm,config,dataset,actual_cps,detected_cps,detected_cps_at,timeout,runtime
+0,ScanB,"$wsize = 200, numw = 5, thresholding_quantile=0.999, forget_factor=0.04$",CIFAR10,"[6000, 12000, 18000, 24000, 30000, 36000, 42000, 48000, 54000]",[],"[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 2338, 2339, 4895, 16747, 29503, 50496, 50596, 52038, 58606, 58903]",False,7833.728395462036

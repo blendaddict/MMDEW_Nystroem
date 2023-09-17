@@ -1,0 +1,245 @@
+import pandas as pd
+import os
+from mmdew import metrics
+from ast import literal_eval
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+
+result_folder_name = "results"
+folder = "final_results" 
+
+files = os.listdir("../" + result_folder_name + "/" + folder)
+
+df = pd.DataFrame()
+
+for f in files:
+    df = pd.concat(
+        [df, pd.read_csv("../" + result_folder_name + "/" + folder + "/" + f, index_col=0)]
+    )
+
+df = df.reset_index(drop=True)
+df = df.drop(df[df["timeout"] == True].index)
+df = df.drop("timeout", axis=1)
+df = df.replace({"GasSensors": "Gas", "CIFAR10": "CIFAR"})
+
+for col in ["actual_cps", "detected_cps_at", "detected_cps"]:
+    df.loc[:, col] = df.loc[:, col].apply(lambda x: literal_eval(x))
+
+df = df.fillna(0)
+df.loc[:, "percent_changes_detected"] = df.apply(
+    lambda x: metrics.percent_changes_detected(x.actual_cps, x.detected_cps_at), axis=1
+)
+
+detectors = ["MMDEW_nys", "MMDEW", "NEWMA", "Scan-$B$"]
+markers = ['*', '>', 'v', '<']
+
+Ts = {
+    "Gas": 1159 * 2,
+    "HAR": 858 * 2,
+    "CIFAR": 6000,
+    "MNIST": 7000,
+    "FMNIST": 7000,
+}
+
+for k, v in Ts.items():
+    df.loc[df["dataset"] == k, "f1_detected_cps_at_beta1"] = df.apply(
+        lambda x: metrics.fb_score(x.actual_cps, x.detected_cps_at, T=v / 1, beta=1),
+        axis=1,
+    )
+
+    df.loc[df["dataset"] == k, "f1_detected_cps_at_beta12"] = df.apply(
+        lambda x: metrics.fb_score(x.actual_cps, x.detected_cps_at, T=v / 2, beta=1),
+        axis=1,
+    )
+
+    df.loc[df["dataset"] == k, "f1_detected_cps_at_beta14"] = df.apply(
+        lambda x: metrics.fb_score(x.actual_cps, x.detected_cps_at, T=v / 4, beta=1),
+        axis=1,
+    )
+
+    df.loc[df["dataset"] == k, "precision"] = df.apply(
+        lambda x: metrics.prec_full(x.actual_cps, x.detected_cps_at, T=v), axis=1
+    )
+    df.loc[df["dataset"] == k, "recall"] = df.apply(
+        lambda x: metrics.rec_full(x.actual_cps, x.detected_cps_at, T=v), axis=1
+    )
+
+runtimes = []
+f1_scores_beta1 = []
+
+std_runtimes = []
+std_f1_b1 = []
+
+f1_scores_beta12 = []
+std_f1_b12 = []
+
+f1_scores_beta14 = []
+std_f1_b14 = []
+
+
+for d in detectors:
+    dataset_runtimes = []
+    dataset_f1 = []
+    dataset_std_runtimes = []
+    dataset_std_f1 = []
+    dataset_f1_b12 = []
+    dataset_std_f1_b12 = []
+    dataset_f1_b14 = []
+    dataset_std_f1_b14 = []
+    for k in Ts.keys():
+        dataset_runtimes.append(np.mean(df[df["dataset"] == k][df["algorithm"] == d]["runtime"].to_list()))
+        dataset_f1.append(np.mean(df[df["dataset"] == k][df["algorithm"] == d]["f1_detected_cps_at_beta1"].to_list()))
+        dataset_std_runtimes.append(np.std(df[df["dataset"] == k][df["algorithm"] == d]["runtime"].to_list()))
+        dataset_std_f1.append(np.std(df[df["dataset"] == k][df["algorithm"] == d]["f1_detected_cps_at_beta1"].to_list()))
+        dataset_f1_b12.append(np.mean(df[df["dataset"] == k][df["algorithm"] == d]["f1_detected_cps_at_beta12"].to_list()))
+        dataset_std_f1_b12.append(np.std(df[df["dataset"] == k][df["algorithm"] == d]["f1_detected_cps_at_beta12"].to_list()))
+        dataset_f1_b14.append(np.mean(df[df["dataset"] == k][df["algorithm"] == d]["f1_detected_cps_at_beta14"].to_list()))
+        dataset_std_f1_b14.append(np.std(df[df["dataset"] == k][df["algorithm"] == d]["f1_detected_cps_at_beta14"].to_list()))
+
+    runtimes.append(dataset_runtimes)
+    std_runtimes.append(dataset_std_runtimes)
+
+    f1_scores_beta1.append(dataset_f1)
+    std_f1_b1.append(dataset_std_f1)
+
+    f1_scores_beta12.append(dataset_f1_b12)
+    std_f1_b12.append(dataset_std_f1_b12)
+
+    f1_scores_beta14.append(dataset_f1_b14)
+    std_f1_b14.append(dataset_std_f1_b14)
+
+#fig, axs = plt.subplots(1, 3, figsize=(15, 4))
+fig, axs = plt.subplots(1, 2, figsize=(15, 4))
+
+
+divider = make_axes_locatable(axs[0])
+axs2 = divider.new_vertical(size="100%", pad=0.1)
+fig.add_axes(axs2)
+
+
+axs2.set_title("Runtime (seconds)")
+axs[1].set_title("$F_1 (\\beta = 1)$")
+#axs[2].set_title("$F_1$-Score, $\\beta = 1/2$")
+
+
+#for i in range(len(runtimes)):   
+    #axs[0].plot(list(Ts.keys()), runtimes[i], color=colors[i], marker=markers[i])
+    #axs[0].fill_between(list(Ts.keys()), np.array(runtimes[i]) - std_runtimes[i], np.array(runtimes[i]) + std_runtimes[i], alpha=0.2, color=colors[i])
+    #axs[0].boxplot(data=list(Ts.keys()), x=runtimes[i])
+    #axs[0].set_ylim(0, 220)
+    #axs[0].spines['top'].set_visible(False)
+    #axs2.plot(list(Ts.keys()), runtimes[i], color=colors[i], marker=markers[i])
+    #axs2.fill_between(list(Ts.keys()), np.array(runtimes[i]) - std_runtimes[i], np.array(runtimes[i]) + std_runtimes[i], alpha=0.2, color=colors[i])
+    #axs2.set_ylim(500, 1800)
+    #axs2.tick_params(bottom=False, labelbottom=False)
+    #axs2.spines['bottom'].set_visible(False)
+
+#    axs[1].plot(list(Ts.keys()), f1_scores_beta1[i], color=colors[i], marker=markers[i])
+    # The lambda expression prevents the standard deviation of the F1-scores to exceed 1.0
+#    axs[1].fill_between(list(Ts.keys()), np.array(f1_scores_beta1[i]) - std_f1_b1[i], list(map(lambda x: min(x, 1.0), np.array(f1_scores_beta1[i]) + std_f1_b1[i])), alpha=0.2, color=colors[i])
+
+#    axs[2].plot(list(Ts.keys()), f1_scores_beta12[i], color=colors[i], marker=markers[i])
+#    axs[2].fill_between(list(Ts.keys()), np.array(f1_scores_beta12[i]) - std_f1_b12[i], list(map(lambda x: min(x, 1.0), np.array(f1_scores_beta12[i]) + std_f1_b12[i])), alpha=0.2, color=colors[i])
+
+#    axs[3].plot(list(Ts.keys()), f1_scores_beta14[i], color=colors[i], marker=markers[i])
+#    axs[3].fill_between(list(Ts.keys()), np.array(f1_scores_beta14[i]) - std_f1_b14[i], list(map(lambda x: min(x, 1.0), np.array(f1_scores_beta14[i]) + std_f1_b14[i])), alpha=0.2, color=colors[i])
+
+
+
+
+avg_results = (
+    df.groupby(["dataset", "algorithm", "config"]).mean().reset_index().fillna(0)
+)
+
+best_configs = avg_results.loc[
+    avg_results.groupby(["dataset", "algorithm"])["f1_detected_cps_at_beta1"].idxmax()
+]
+
+bar_width = 0.18
+group_idx = np.arange(5)
+algorithms = ["MMDEW_nys", "MMDEW", "NewMA", "ScanB"]
+#colors = ['#fb8072', '#8dd3c7', '#bebada', '#707070']
+colors = ["#CFD9B6", "#7DB586", "#436766", "#2F455F"]
+axs[0].grid(visible=None, axis="y")
+axs2.grid(visible=None, axis="y")
+axs[1].grid(visible=None, axis="y")
+#axs[2].grid(visible=None, axis="y")
+
+for i, a in enumerate(algorithms):
+    x_vals = group_idx + i * bar_width
+    y_vals_runtime = df[df.algorithm == a].groupby("dataset")['runtime'].mean()
+    err_runtime = df[df.algorithm == a].groupby("dataset")['runtime'].std()
+    y_vals_f1_1 = df[df.algorithm == a].groupby("dataset")['f1_detected_cps_at_beta1'].mean()
+    err_f1_1 = df[df.algorithm == a].groupby("dataset")['f1_detected_cps_at_beta1'].std()
+
+    y_vals_f1_12 = df[df.algorithm == a].groupby("dataset")['f1_detected_cps_at_beta12'].mean()
+    err_f1_12 = df[df.algorithm == a].groupby("dataset")['f1_detected_cps_at_beta12'].std()
+
+    axs[0].bar(x_vals, y_vals_runtime, width=bar_width, edgecolor="white", label=a, color=colors[i])
+    axs[0].errorbar(x_vals, y_vals_runtime, yerr=err_runtime, fmt="none", ecolor="black")
+    axs[1].bar(x_vals, y_vals_f1_1, width=bar_width, edgecolor="white", label=a, color=colors[i])
+    axs[1].errorbar(x_vals, y_vals_f1_1, yerr=err_f1_1, fmt="none", ecolor="black")
+    #axs[2].bar(x_vals, y_vals_f1_12, width=bar_width, edgecolor="white", label=a, color=colors[i])
+    #axs[2].errorbar(x_vals, y_vals_f1_12, yerr=err_f1_12, fmt="none", ecolor="black")
+
+
+    axs[0].set_ylim(0,240)
+    axs[0].spines['top'].set_visible(False)
+    axs2.spines['bottom'].set_visible(False)
+    axs2.bar(x_vals, y_vals_runtime, width=bar_width, edgecolor="white", label=a, color=colors[i])
+    axs2.errorbar(x_vals, y_vals_runtime, yerr=err_runtime, fmt="none", ecolor="black")
+    axs2.set_ylim(1500, 7000)
+    axs2.set_yticks([1500, 2000, 3000, 4000, 5000, 6000, 7000])
+    axs2.tick_params(bottom=False, labelbottom=False)
+    axs[0].set_xticks(
+        [r + bar_width * 2 for r in group_idx], best_configs.dataset.unique()
+    )
+    axs[1].set_xticks(
+        [r + bar_width * 2 for r in group_idx], best_configs.dataset.unique()
+    )
+    #axs[2].set_xticks(
+    #    [r + bar_width * 2 for r in group_idx], best_configs.dataset.unique()
+    #)
+    axs[0].set_axisbelow(True)  # This line added.
+    axs[1].set_axisbelow(True)  # This line added.
+    #axs[2].set_axisbelow(True)  # This line added.
+    axs2.set_axisbelow(True)  # This line added.
+    
+
+# Add scale-break diagonal lines
+d = .015
+kwargs = dict(transform=axs2.transAxes, color='k', clip_on=False)
+axs2.plot((-d, +d), (-d, +d), **kwargs)        # top-left diagonal
+axs2.plot((1 - d, 1 + d), (-d, +d), **kwargs)  # top-right diagonal
+
+kwargs.update(transform=axs[0].transAxes)  # switch to the bottom axes
+axs[0].plot((-d, +d), (1 - d, 1 + d), **kwargs)  # bottom-left diagonal
+axs[0].plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
+
+#axs2.grid(True, linestyle='--', alpha=0.7, zorder=-1)
+#axs[0].grid(True, linestyle='--', alpha=0.7, zorder=-1)
+#axs[1].grid(True, linestyle='--', alpha=0.7, zorder=-1)
+#axs[2].grid(True, linestyle='--', alpha=0.7, zorder=-1)
+
+axs[1].set_yticks(np.arange(0, 1.1, 0.2))
+#axs[2].set_yticks(np.arange(0, 1.1, 0.2))
+axs[1].set_ylim(0, 1.0)
+#axs[2].set_ylim(0, 1.0)
+
+x_labels = ['CIFAR \n (60000)', 'FMNIST \n (70000)', 'Gas \n (13910)', 'HAR \n (10299)', 'MNIST \n (70000)']
+axs[0].set_xticklabels(x_labels)
+
+
+detectors = ["MMDEW_nys", "MMDEW", "NewMA", "ScanB"]
+
+legend_handles = []
+for i in range(len(detectors)):
+    legend_handles.append(axs[0].scatter([], [], c=colors[i], alpha=1, s=50))
+legend = fig.legend(legend_handles, detectors, loc='upper center', ncol=len(detectors), bbox_to_anchor=(0.5, 1.1), fontsize=14, title=None)
+frame = legend.get_frame()
+frame.set_facecolor('white')
+frame.set_linewidth(0.7)
+plt.savefig('runtime_vs_f1_final_thesis.pdf', bbox_inches='tight')
+plt.show()

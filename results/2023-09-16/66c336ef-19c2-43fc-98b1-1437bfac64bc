@@ -1,0 +1,2 @@
+,algorithm,config,dataset,actual_cps,detected_cps,detected_cps_at,timeout,runtime
+0,ScanB,"$wsize = 300, numw = 3, thresholding_quantile=0.99, forget_factor=0.1$",FMNIST,"[7000, 14000, 21000, 28000, 35000, 42000, 49000, 56000, 63000]",[],"[1, 2, 3, 4, 5, 6, 7, 8, 9, 2556, 2557, 4067, 4676, 5088, 5640, 7005, 7006, 12546, 15511, 22402, 24250, 34098, 34279, 34437, 40981, 41550, 43568, 46505, 46921, 47845, 48382, 60485, 66159]",False,3562.8096289634705
