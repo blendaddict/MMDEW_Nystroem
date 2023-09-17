@@ -41,16 +41,16 @@ class MMDEW_Nys_Adapter(DriftDetector):
         self.element_count+=1
         self.detected_cp = False
         prev_cps = len(self.detector.get_changepoints())
-        bsstring = ""
-        for i in range(0, len(self.detector.buckets)):
-           bsstring += "(" + str(self.detector.buckets[i].uncompressed_capacity) + " " + str(len(self.detector.buckets[i].weights)) + ")"
-        #first cp of mnist is at 6825
+        # bsstring = ""
+        # for i in range(0, len(self.detector.buckets)):
+        #    bsstring += "(" + str(self.detector.buckets[i].uncompressed_capacity) + " " + str(len(self.detector.buckets[i].weights)) + ")"
+        # #first cp of mnist is at 6825
         
-        mmdcalc = "undefined"
-        if(len(self.detector.buckets) > 2):
-            mmdcalc = str(self.detector.mmd(1))
+        # mmdcalc = "undefined"
+        # if(len(self.detector.buckets) > 2):
+        #     mmdcalc = str(self.detector.mmd(1))
 
-        print(f"elements read: {self.element_count}, mmd between biggest bucket and rest: {mmdcalc} current bs stream length: {len(self.detector.buckets)} stream: {bsstring}")
+        # print(f"elements read: {self.element_count}, mmd between biggest bucket and rest: {mmdcalc} current bs stream length: {len(self.detector.buckets)} stream: {bsstring}")
         #print(f"mmd between biggest bucket and rest: {self.detector.mmd(1)} " )
         self.detector.insert(input_value[0])
         if len(self.detector.get_changepoints()) > prev_cps:

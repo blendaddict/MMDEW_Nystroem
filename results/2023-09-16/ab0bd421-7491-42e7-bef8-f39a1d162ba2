@@ -1,0 +1,2 @@
+,algorithm,config,dataset,actual_cps,detected_cps,detected_cps_at,timeout,runtime
+0,MMDEW_nys,$\alpha = 0.0001$,CIFAR10,"[6000, 12000, 18000, 24000, 30000, 36000, 42000, 48000, 54000]","[12287, 28671, 53247]","[13428, 34064, 56700]",False,3756.9399104118347

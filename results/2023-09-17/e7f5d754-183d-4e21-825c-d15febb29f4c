@@ -1,0 +1,2 @@
+,algorithm,config,dataset,actual_cps,detected_cps,detected_cps_at,timeout,runtime
+0,NewMA,"$wsize=50, forget_factor=0.07, thresholding_quantile=0.999$",CIFAR10,"[6000, 12000, 18000, 24000, 30000, 36000, 42000, 48000, 54000]",[],"[0, 1, 2, 6970, 8947, 11000, 16979, 23817, 24574, 25459, 28063, 31688, 39620, 52456, 53048, 53291, 55541]",False,9.006015539169312

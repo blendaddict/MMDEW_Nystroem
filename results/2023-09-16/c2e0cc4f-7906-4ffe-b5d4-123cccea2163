@@ -1,0 +1,2 @@
+,algorithm,config,dataset,actual_cps,detected_cps,detected_cps_at,timeout,runtime
+0,MMDEW_nys,$\alpha = 1e-08$,HAR,"[1906, 3850, 5572, 6978, 8755]","[4095, 7167]","[5479, 8154]",False,108.03409171104431

@@ -1,0 +1,2 @@
+,algorithm,config,dataset,actual_cps,detected_cps,detected_cps_at,timeout,runtime
+0,NewMA,"$wsize=300, forget_factor=0.07, thresholding_quantile=0.999$",HAR,"[1906, 3850, 5572, 6978, 8755]",[],"[0, 1, 2, 7519]",False,62.51537108421326

@@ -1,0 +1,2 @@
+,algorithm,config,dataset,actual_cps,detected_cps,detected_cps_at,timeout,runtime
+0,ScanB,"$wsize = 20, numw = 3, thresholding_quantile=0.99, forget_factor=0.1$",HAR,"[1906, 3850, 5572, 6978, 8755]",[],"[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1208, 1567, 2820, 3421, 3573, 4500, 5696, 6987, 7396, 7522, 8758, 8759, 8760, 8761, 8762, 9286, 9287]",False,25.855189561843872

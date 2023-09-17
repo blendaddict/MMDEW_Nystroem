@@ -20,6 +20,7 @@ parts/
 sdist/
 var/
 mmdew-nystroem/
+mmdew-nys/
 wheels/
 share/python-wheels/
 *.egg-info/
